@@ -243,8 +243,12 @@ export function matchByKeywords(
       reason: 'По смыслу ничего не нашлось, показаны книга и телефон',
     };
   }
-  const main = ranked.slice(0, 3).map(([objectId]) => objectId);
-  const background = ranked.slice(3, 5).map(([objectId]) => objectId);
+  const rankedIds = ranked.map(([objectId]) => objectId);
+  const main = expandMains(rankedIds.slice(0, 4), items, rankedIds);
+  const used = new Set(main);
+  const background = rankedIds
+    .filter((objectId) => !used.has(objectId))
+    .slice(0, 2);
   const template = main.length <= 1 ? 'under-title' : 'compact';
   return {
     main,
@@ -252,6 +256,50 @@ export function matchByKeywords(
     template,
     reason: 'Собрано по тегам',
   };
+}
+
+const PARTNER: Record<string, string> = {
+  coin: 'wallet',
+  wallet: 'coin',
+  book: 'pen',
+  pen: 'book',
+  folder: 'lamp',
+  lamp: 'folder',
+  headphones: 'phone',
+  phone: 'headphones',
+  puzzle: 'book',
+  flowers: 'lamp',
+};
+
+/** At least two mains when the library has them. Hints fill a one-object model pick. */
+export function expandMains(
+  main: string[],
+  items: LibraryItem[],
+  hints: string[] = [],
+  blocked: string[] = [],
+): string[] {
+  const catalog = new Set(items.map((item) => item.objectId));
+  const next = main.filter((objectId) => catalog.has(objectId));
+  if (catalog.size < 2) return next;
+  const used = new Set([...next, ...blocked]);
+  const add = (objectId?: string) => {
+    if (next.length >= 2) return;
+    if (!objectId || used.has(objectId) || !catalog.has(objectId)) return;
+    next.push(objectId);
+    used.add(objectId);
+  };
+  if (next.length < 2) {
+    for (const objectId of hints) add(objectId);
+  }
+  if (next.length < 2) {
+    for (const objectId of [...next]) add(PARTNER[objectId]);
+  }
+  if (next.length < 2) {
+    for (const objectId of ['book', 'pen', 'wallet', 'coin', 'phone']) {
+      add(objectId);
+    }
+  }
+  return next;
 }
 
 export function libraryItemMatches(item: LibraryItem, query: string): boolean {

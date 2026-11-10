@@ -395,6 +395,59 @@ describe('editor', () => {
     expect(downloads[0]).toMatch(/^landscape-\d{4}-\d{2}-\d{2}\.svg$/);
   });
 
+  it('hides name chips in meaning mode and shows only the metaphor pick', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    render(<App />);
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Собрать из объектов' }),
+      {
+        target: { value: 'книга, телефон и пазлы' },
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    expect(
+      screen.getByRole('list', { name: 'Распознанные объекты' }),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Смысл' }));
+    expect(
+      screen.queryByRole('list', { name: 'Распознанные объекты' }),
+    ).toBeNull();
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Метафора или заголовок' }),
+      { target: { value: 'деньги' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    await waitFor(() => {
+      expect(
+        screen.getByRole('list', { name: 'Подобранные объекты' }),
+      ).toBeTruthy();
+    });
+    const chips = screen.getByRole('list', { name: 'Подобранные объекты' });
+    expect(chips.textContent).toContain('Монета');
+    expect(chips.textContent).toContain('Кошелек');
+    expect(chips.textContent).not.toContain('Телефон');
+    expect(
+      screen.queryByRole('list', { name: 'Распознанные объекты' }),
+    ).toBeNull();
+  });
+
+  it('recolors library thumbnails with the active scheme', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Персик' }));
+    const book = screen.getByRole('button', { name: 'Книга' });
+    const mainSvg = book.querySelector('svg');
+    expect(mainSvg?.innerHTML.toLowerCase()).toContain('#80dada');
+    expect(mainSvg?.innerHTML.toLowerCase()).not.toContain('#f9a3aa');
+    fireEvent.click(screen.getByRole('button', { name: 'Фоновые' }));
+    const backgroundSvg = screen
+      .getByRole('button', { name: 'Книга' })
+      .querySelector('svg');
+    const html = backgroundSvg?.innerHTML.toLowerCase() ?? '';
+    expect(html).toContain('#d27532');
+    expect(html).not.toContain('#80dada');
+    expect(html).not.toContain('#f9a3aa');
+  });
+
   it('library search «ваза» hides Книга but keeps Цветы', () => {
     render(<App />);
     const search = screen.getByRole('textbox', { name: 'Поиск по библиотеке' });

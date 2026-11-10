@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import manifest from '../../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../../model/formats.ts';
 import type { FormatId, Manifest, PlacedObject } from '../../model/types.ts';
+import { centerClear } from '../arrange.ts';
 import { ensureBackdrop } from '../backdrop.ts';
+import { composePick, composePlacements } from '../compose.ts';
 import {
   type Box,
   axisBox,
@@ -154,7 +156,7 @@ describe('compact layout', () => {
       { ids: ['book', 'phone', 'puzzle'], span: 0.45 },
       { ids: ['headphones', 'flowers'], span: 0.45 },
       { ids: ['folder', 'pen', 'coin'], span: 0.45 },
-      { ids: ['wallet', 'coin'], span: 0.3 },
+      { ids: ['wallet', 'coin'], span: 0.26 },
     ];
     const failures: string[] = [];
     for (const format of FORMATS_IDS) {
@@ -216,5 +218,59 @@ describe('compact layout', () => {
     }
     expect(failures.slice(0, 8)).toEqual([]);
     expect(failures).toHaveLength(0);
+  });
+
+  it('keeps backdrop centers inside the frame for names and meaning on every format', () => {
+    const failures: string[] = [];
+    const templates = ['compact', 'offset', 'under-title'] as const;
+    for (const format of FORMATS_IDS) {
+      const frame = FORMATS[format];
+      const named = composePlacements(
+        [
+          { objectId: 'book', count: 1 },
+          { objectId: 'phone', count: 1 },
+        ],
+        { format, seed: 2 },
+      );
+      for (const background of named.objects) {
+        if (background.role !== 'background') continue;
+        const box = axisBox(background, named.scale);
+        const visible = visibleFraction(box, frame);
+        if (
+          visible < 0.6 ||
+          !centerClear(background, { w: box.w, h: box.h }, frame)
+        ) {
+          failures.push(
+            `names ${format} ${background.objectId} ${visible.toFixed(2)}`,
+          );
+        }
+      }
+      for (const template of templates) {
+        const scene = composePick(
+          {
+            main: ['book', 'coin'],
+            background: ['lamp'],
+            template,
+          },
+          { format, seed: 3 },
+        );
+        const lamp = scene.objects.find((object) => object.objectId === 'lamp');
+        if (!lamp) {
+          failures.push(`meaning ${format} ${template} missing lamp`);
+          continue;
+        }
+        const box = axisBox(lamp, scene.scale);
+        const visible = visibleFraction(box, frame);
+        if (
+          visible < 0.6 ||
+          !centerClear(lamp, { w: box.w, h: box.h }, frame)
+        ) {
+          failures.push(
+            `meaning ${format} ${template} ${visible.toFixed(2)} @${lamp.x.toFixed(0)},${lamp.y.toFixed(0)}`,
+          );
+        }
+      }
+    }
+    expect(failures).toEqual([]);
   });
 });

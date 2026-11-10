@@ -1,4 +1,5 @@
 import { ensureBackdrop } from '../core/backdrop.ts';
+import { renderedSize } from '../core/geometry.ts';
 import { layoutScene, templateById, type TemplateId } from '../core/layout.ts';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../model/formats.ts';
@@ -217,12 +218,19 @@ function duplicateObject(state: Composition, uid: string): Composition {
   const source = state.objects.find((object) => object.uid === uid);
   if (!source) return state;
   const z = source.z + 1;
-  // Spec offset is 24px. Shift both axes so the copy does not sit on the source.
+  const frame = FORMATS[state.format];
+  const size = renderedSize(source, state.scale);
+  const shiftX = Math.max(64, Math.round(size.w * 0.42));
+  const shiftY = Math.max(48, Math.round(size.h * 0.22));
+  let x = source.x + shiftX;
+  let y = source.y + shiftY;
+  if (x > frame.w - size.w * 0.2) x = source.x - shiftX;
+  if (y > frame.h - size.h * 0.2) y = source.y - shiftY;
   const copy: PlacedObject = {
     ...source,
     uid: nextUid(state.objects),
-    x: source.x + 24,
-    y: source.y + 24,
+    x,
+    y,
     z,
   };
   const objects = state.objects.map((object) =>

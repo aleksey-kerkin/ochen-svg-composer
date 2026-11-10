@@ -2,6 +2,7 @@ import manifestJson from '../library/manifest.json' with { type: 'json' };
 import type { FormatId, LibraryItem, Manifest } from '../model/types.ts';
 import { matchByKeywords } from '../core/match.ts';
 import {
+  ensureMainPair,
   finishPick,
   parseModelContent,
   validatePick,
@@ -44,7 +45,8 @@ function systemPrompt(items: LibraryItem[]): string {
   return [
     'Ты подбираешь объекты для иллюстрации из фиксированной библиотеки.',
     'Можно использовать только id из списка. Не придумывай объекты и не описывай SVG.',
-    'Выбери от 1 до 3 главных id, которые передают смысл заголовка или метафоры.',
+    'Выбери от 2 до 4 главных id, которые передают смысл заголовка или метафоры.',
+    'Один объект — слишком мало: деньги это wallet и coin, учёба это book и pen.',
     'Фоновые id — от 0 до 2. Это монохромный задний план. Если фон не нужен, оставь background пустым.',
     'Не повторяй id внутри одного списка. Шаблон: under-title, offset или compact.',
     'Ответь одним JSON без пояснений:',
@@ -103,7 +105,11 @@ async function askModel(
   if (!validated || validated.main.length === 0) {
     throw new Error('empty pick');
   }
-  return finishPick(validated, 'model', model);
+  return finishPick(
+    ensureMainPair(validated, input.text, items),
+    'model',
+    model,
+  );
 }
 
 /** Asks the primary model, then the fallback, then picks by tags. */

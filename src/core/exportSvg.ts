@@ -212,6 +212,19 @@ export function exportSvg(composition: Composition, palette?: Palette): string {
 `);
 }
 
+/** Calendar date in the viewer's local timezone, not UTC. */
+export function localDateStamp(date: Date, timeZone?: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    ...(timeZone ? { timeZone } : {}),
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
+
 /** Format and date, or the metaphor/title when the scene was composed from one. */
 export function exportFileName(input: {
   format: FormatId;
@@ -219,7 +232,7 @@ export function exportFileName(input: {
   date?: Date;
 }): string {
   const date = input.date ?? new Date();
-  const stamp = date.toISOString().slice(0, 10);
+  const stamp = localDateStamp(date);
   const title = input.title
     ?.trim()
     .toLowerCase()

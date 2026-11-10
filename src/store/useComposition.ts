@@ -19,6 +19,7 @@ import {
   reduceComposition,
   type CompositionAction,
 } from './composition.ts';
+import { readPaletteMemory, writePaletteMemory } from './paletteMemory.ts';
 
 const library = manifestJson as Manifest;
 
@@ -126,9 +127,23 @@ function applyMetaphor(
   return next;
 }
 
+const remembered = readPaletteMemory();
+
+function rememberPalettes(state: CompositionStore): void {
+  writePaletteMemory({
+    paletteId: state.paletteId,
+    customPalettes: state.customPalettes,
+  });
+}
+
 export const useComposition = create<CompositionStore>((set, get) => ({
   ...initialComposition(),
-  customPalettes: [],
+  ...(remembered
+    ? {
+        paletteId: remembered.paletteId,
+        customPalettes: remembered.customPalettes,
+      }
+    : { customPalettes: [] }),
   metaphorPending: false,
   add: (objectId, role) =>
     set((state) => apply(state, { type: 'add', objectId, role })),
@@ -161,9 +176,11 @@ export const useComposition = create<CompositionStore>((set, get) => ({
       if (!palette) return state;
       const error = usageError(state, palette);
       if (error) return { ...state, paletteError: error };
-      return withoutPaletteError(
+      const next = withoutPaletteError(
         apply(state, { type: 'setPalette', paletteId }),
       );
+      rememberPalettes(next);
+      return next;
     }),
   addPalette: (text) =>
     set((state) => {
@@ -176,11 +193,14 @@ export const useComposition = create<CompositionStore>((set, get) => ({
       };
       const error = usageError(state, palette);
       if (error) return { ...state, paletteError: error };
-      const next = apply(
-        { ...state, customPalettes: [...state.customPalettes, palette] },
-        { type: 'setPalette', paletteId: palette.id },
+      const next = withoutPaletteError(
+        apply(
+          { ...state, customPalettes: [...state.customPalettes, palette] },
+          { type: 'setPalette', paletteId: palette.id },
+        ),
       );
-      return withoutPaletteError(next);
+      rememberPalettes(next);
+      return next;
     }),
   toggleRole: (uid) =>
     set((state) => apply(state, { type: 'toggleRole', uid })),

@@ -101,7 +101,7 @@ describe('composition reducer', () => {
     expect(next.objects[1]?.role).toBe('main');
   });
 
-  it('offsets a duplicate by 24px on both axes', () => {
+  it('offsets a duplicate far enough that it does not sit on the source', () => {
     const state = place('book');
     const source = state.objects[0];
     expect(source).toBeDefined();
@@ -110,9 +110,16 @@ describe('composition reducer', () => {
       uid: source?.uid ?? '',
     });
     const copy = next.objects[1];
-    expect(copy?.x).toBe((source?.x ?? 0) + 24);
-    expect(copy?.y).toBe((source?.y ?? 0) + 24);
+    expect(copy).toBeDefined();
+    expect(Math.abs((copy?.x ?? 0) - (source?.x ?? 0))).toBeGreaterThanOrEqual(
+      64,
+    );
+    expect(Math.abs((copy?.y ?? 0) - (source?.y ?? 0))).toBeGreaterThanOrEqual(
+      48,
+    );
     expect(copy?.rotation).toBe(source?.rotation);
+    expect(copy?.x).not.toBe(source?.x);
+    expect(copy?.y).not.toBe(source?.y);
   });
 
   it('places a duplicate one step above its source', () => {

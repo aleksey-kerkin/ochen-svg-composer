@@ -7,16 +7,12 @@ import type {
 } from '../model/types.ts';
 import {
   arrangeMains,
+  backgroundReadable,
   fitScale,
   orderByDepth,
   placeEdgeBackgrounds,
 } from './arrange.ts';
-import {
-  axisBox,
-  crossesFrame,
-  intersection,
-  visibleFraction,
-} from './geometry.ts';
+import { axisBox, crossesFrame } from './geometry.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
@@ -296,7 +292,7 @@ export function layoutScene(
   for (
     let attempt = 0;
     reserveBackdrop &&
-    attempt < 8 &&
+    attempt < 12 &&
     !backdropReadable(placed, scale, template.format);
     attempt += 1
   ) {
@@ -315,13 +311,7 @@ function backdropReadable(
   const mains = objects.filter((object) => object.role === 'main');
   return objects
     .filter((object) => object.role === 'background')
-    .every((object) => {
-      const box = axisBox(object, scale);
-      if (visibleFraction(box, frame) < 0.6) return false;
-      return mains.every(
-        (main) => intersection(axisBox(main, scale), box) === null,
-      );
-    });
+    .every((object) => backgroundReadable(object, scale, frame, mains));
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */
