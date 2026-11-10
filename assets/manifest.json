@@ -1,0 +1,1592 @@
+{
+  "source": {
+    "fileKey": "zTsotCGcnw9DjMBQwI4Jol",
+    "page": "0:1 Библиотека компонентов",
+    "sections": {
+      "L": "21:25788",
+      "S": "21:25859"
+    },
+    "method": "Figma MCP get_design_context → per-node SVG asset URL → curl",
+    "extracted": "2026-11-10"
+  },
+  "notes": [
+    "Все объекты нарисованы только в схеме lilac; peach/teal существуют только как фоны + плашки палитр.",
+    "Фоновые объекты = монохромные версии тех же 10 объектов (цвета #D7CDF5 + #7864D7).",
+    "bbox — координаты внутри секции Figma; svgSize — размер SVG (= размер узла). Пропорции между объектами задаются svgSize.",
+    "S фоновые объекты — уменьшенные копии L (та же детализация), S главные местами упрощены (phone, headphones)."
+  ],
+  "items": [
+    {
+      "id": "book.L.main",
+      "objectId": "book",
+      "name": "Книга",
+      "figmaName": "Книга",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "21:29965",
+      "bbox": {
+        "x": 391.64,
+        "y": 3467.37,
+        "w": 1445.89,
+        "h": 976.66
+      },
+      "svgSize": {
+        "w": 1445.89,
+        "h": 976.664
+      },
+      "file": "L/main/book.svg",
+      "colors": [
+        "#181817",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFE3E1",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 12,
+        "#F9A3AA": 3,
+        "#FFE3E1": 14,
+        "#F9ECB0": 12,
+        "#FFFFFF": 12
+      },
+      "elements": {
+        "g": 1,
+        "path": 53
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "phone.L.main",
+      "objectId": "phone",
+      "name": "Телефон",
+      "figmaName": "Телефон",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "21:25472",
+      "bbox": {
+        "x": 2038.58,
+        "y": 3718.64,
+        "w": 796.53,
+        "h": 461.67
+      },
+      "svgSize": {
+        "w": 796.532,
+        "h": 461.667
+      },
+      "file": "L/main/phone.svg",
+      "colors": [
+        "#181817",
+        "#7864D7",
+        "#D7CDF5",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 59,
+        "#FFFFFF": 5,
+        "#F9ECB0": 7,
+        "#D7CDF5": 50,
+        "#7864D7": 34
+      },
+      "elements": {
+        "g": 1,
+        "path": 155
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "puzzle.L.main",
+      "objectId": "puzzle",
+      "name": "Пазлы",
+      "figmaName": "Пазлы",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "21:417",
+      "bbox": {
+        "x": 3100.24,
+        "y": 3827.74,
+        "w": 544.16,
+        "h": 313.53
+      },
+      "svgSize": {
+        "w": 544.163,
+        "h": 313.534
+      },
+      "file": "L/main/puzzle.svg",
+      "colors": [
+        "#181817",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 22,
+        "#F9ECB0": 2,
+        "#FFFFFF": 29,
+        "#F9A3AA": 4
+      },
+      "elements": {
+        "g": 1,
+        "path": 57
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "coin.L.main",
+      "objectId": "coin",
+      "name": "Монета",
+      "figmaName": "Монета",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:2207",
+      "bbox": {
+        "x": 4005.3,
+        "y": 3945.82,
+        "w": 286.68,
+        "h": 188.5
+      },
+      "svgSize": {
+        "w": 286.677,
+        "h": 188.501
+      },
+      "file": "L/main/coin.svg",
+      "colors": [
+        "#181817",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#FFFFFF": 14,
+        "#F9ECB0": 24,
+        "#181817": 98
+      },
+      "elements": {
+        "g": 1,
+        "path": 136
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "headphones.L.main",
+      "objectId": "headphones",
+      "name": "Наушники",
+      "figmaName": "Наушники",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "23:122",
+      "bbox": {
+        "x": 470.02,
+        "y": 4803.09,
+        "w": 888.15,
+        "h": 691.54
+      },
+      "svgSize": {
+        "w": 888.15,
+        "h": 691.542
+      },
+      "file": "L/main/headphones.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 21,
+        "#FFFFFF": 13,
+        "#F9ECB0": 3,
+        "#D7CDF5": 47
+      },
+      "elements": {
+        "g": 1,
+        "path": 84
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "lamp.L.main",
+      "objectId": "lamp",
+      "name": "Лампа",
+      "figmaName": "Лампа",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "23:121",
+      "bbox": {
+        "x": 1822.23,
+        "y": 4438.76,
+        "w": 945.94,
+        "h": 1128.99
+      },
+      "svgSize": {
+        "w": 945.943,
+        "h": 1128.99
+      },
+      "file": "L/main/lamp.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 4,
+        "#FFFFFF": 10,
+        "#D7CDF5": 6,
+        "#F9ECB0": 5,
+        "#F9A3AA": 2
+      },
+      "elements": {
+        "g": 1,
+        "path": 27
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "flowers.L.main",
+      "objectId": "flowers",
+      "name": "Цветы (ваза)",
+      "figmaName": "Group 2136136344",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "28:11628",
+      "bbox": {
+        "x": 3036.02,
+        "y": 4712.72,
+        "w": 590.57,
+        "h": 747.11
+      },
+      "svgSize": {
+        "w": 590.573,
+        "h": 747.106
+      },
+      "file": "L/main/flowers.svg",
+      "colors": [
+        "#181817",
+        "#AA9BF0",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 26,
+        "#FFFFFF": 34,
+        "#F9ECB0": 30,
+        "#AA9BF0": 18,
+        "#F9A3AA": 23
+      },
+      "elements": {
+        "g": 1,
+        "path": 131
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "wallet.L.main",
+      "objectId": "wallet",
+      "name": "Кошелек",
+      "figmaName": "Кошелек",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "23:211",
+      "bbox": {
+        "x": 3868.26,
+        "y": 5095.11,
+        "w": 630.42,
+        "h": 396.31
+      },
+      "svgSize": {
+        "w": 630.416,
+        "h": 396.31
+      },
+      "file": "L/main/wallet.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 16,
+        "#181817": 55,
+        "#F9ECB0": 10,
+        "#FFFFFF": 5
+      },
+      "elements": {
+        "g": 1,
+        "path": 86
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "folder.L.main",
+      "objectId": "folder",
+      "name": "Папка",
+      "figmaName": "Папка",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:1899",
+      "bbox": {
+        "x": 365.27,
+        "y": 5920.18,
+        "w": 1240.62,
+        "h": 658.59
+      },
+      "svgSize": {
+        "w": 1240.62,
+        "h": 658.588
+      },
+      "file": "L/main/folder.svg",
+      "colors": [
+        "#181817",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#F9ECB0": 11,
+        "#181817": 4,
+        "#FFFFFF": 6,
+        "#F9A3AA": 1
+      },
+      "elements": {
+        "g": 1,
+        "path": 22
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "pen.L.main",
+      "objectId": "pen",
+      "name": "Ручка",
+      "figmaName": "Ручка",
+      "size": "L",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:1734",
+      "bbox": {
+        "x": 1795.8,
+        "y": 6127.63,
+        "w": 508.43,
+        "h": 285.4
+      },
+      "svgSize": {
+        "w": 508.428,
+        "h": 285.4
+      },
+      "file": "L/main/pen.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 7,
+        "#D7CDF5": 1,
+        "#FFFFFF": 14,
+        "#F9A3AA": 1,
+        "#F9ECB0": 1
+      },
+      "elements": {
+        "g": 1,
+        "path": 24
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "book.L.background",
+      "objectId": "book",
+      "name": "Книга",
+      "figmaName": "Книга",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6273",
+      "bbox": {
+        "x": 391.64,
+        "y": 7491.56,
+        "w": 1445.89,
+        "h": 976.66
+      },
+      "svgSize": {
+        "w": 1445.89,
+        "h": 976.664
+      },
+      "file": "L/background/book.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 12,
+        "#D7CDF5": 41
+      },
+      "elements": {
+        "g": 1,
+        "path": 53
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "phone.L.background",
+      "objectId": "phone",
+      "name": "Телефон",
+      "figmaName": "Телефон",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6327",
+      "bbox": {
+        "x": 2038.58,
+        "y": 7742.82,
+        "w": 796.53,
+        "h": 461.67
+      },
+      "svgSize": {
+        "w": 796.532,
+        "h": 461.667
+      },
+      "file": "L/background/phone.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 93,
+        "#D7CDF5": 62
+      },
+      "elements": {
+        "g": 1,
+        "path": 155
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "puzzle.L.background",
+      "objectId": "puzzle",
+      "name": "Пазлы",
+      "figmaName": "Пазлы",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6214",
+      "bbox": {
+        "x": 3100.24,
+        "y": 7851.92,
+        "w": 544.16,
+        "h": 313.53
+      },
+      "svgSize": {
+        "w": 544.163,
+        "h": 313.534
+      },
+      "file": "L/background/puzzle.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 22,
+        "#D7CDF5": 35
+      },
+      "elements": {
+        "g": 1,
+        "path": 57
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "coin.L.background",
+      "objectId": "coin",
+      "name": "Монета",
+      "figmaName": "Монета",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6795",
+      "bbox": {
+        "x": 4005.3,
+        "y": 7970.0,
+        "w": 286.68,
+        "h": 188.5
+      },
+      "svgSize": {
+        "w": 286.677,
+        "h": 188.501
+      },
+      "file": "L/background/coin.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 38,
+        "#7864D7": 98
+      },
+      "elements": {
+        "g": 1,
+        "path": 136
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "headphones.L.background",
+      "objectId": "headphones",
+      "name": "Наушники",
+      "figmaName": "Наушники",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6484",
+      "bbox": {
+        "x": 470.02,
+        "y": 8827.27,
+        "w": 888.15,
+        "h": 691.54
+      },
+      "svgSize": {
+        "w": 888.15,
+        "h": 691.542
+      },
+      "file": "L/background/headphones.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 20,
+        "#D7CDF5": 64
+      },
+      "elements": {
+        "g": 1,
+        "path": 84
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "lamp.L.background",
+      "objectId": "lamp",
+      "name": "Лампа",
+      "figmaName": "Лампа",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6569",
+      "bbox": {
+        "x": 1822.23,
+        "y": 8462.94,
+        "w": 945.94,
+        "h": 1128.99
+      },
+      "svgSize": {
+        "w": 945.943,
+        "h": 1128.99
+      },
+      "file": "L/background/lamp.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 4,
+        "#D7CDF5": 23
+      },
+      "elements": {
+        "g": 1,
+        "path": 27
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "flowers.L.background",
+      "objectId": "flowers",
+      "name": "Цветы (ваза)",
+      "figmaName": "Group 2136136347",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "30:11902",
+      "bbox": {
+        "x": 3060.91,
+        "y": 8797.6,
+        "w": 590.57,
+        "h": 747.11
+      },
+      "svgSize": {
+        "w": 590.573,
+        "h": 747.106
+      },
+      "file": "L/background/flowers.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 26,
+        "#D7CDF5": 105
+      },
+      "elements": {
+        "g": 1,
+        "path": 131
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "wallet.L.background",
+      "objectId": "wallet",
+      "name": "Кошелек",
+      "figmaName": "Кошелек",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6660",
+      "bbox": {
+        "x": 3868.26,
+        "y": 9119.29,
+        "w": 630.42,
+        "h": 396.31
+      },
+      "svgSize": {
+        "w": 630.416,
+        "h": 396.31
+      },
+      "file": "L/background/wallet.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 31,
+        "#7864D7": 55
+      },
+      "elements": {
+        "g": 1,
+        "path": 86
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "folder.L.background",
+      "objectId": "folder",
+      "name": "Папка",
+      "figmaName": "Папка",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6772",
+      "bbox": {
+        "x": 365.27,
+        "y": 9944.36,
+        "w": 1240.62,
+        "h": 658.59
+      },
+      "svgSize": {
+        "w": 1240.62,
+        "h": 658.588
+      },
+      "file": "L/background/folder.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 18,
+        "#7864D7": 4
+      },
+      "elements": {
+        "g": 1,
+        "path": 22
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "pen.L.background",
+      "objectId": "pen",
+      "name": "Ручка",
+      "figmaName": "Ручка",
+      "size": "L",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6747",
+      "bbox": {
+        "x": 1795.8,
+        "y": 10151.81,
+        "w": 508.43,
+        "h": 285.4
+      },
+      "svgSize": {
+        "w": 508.428,
+        "h": 285.4
+      },
+      "file": "L/background/pen.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 7,
+        "#D7CDF5": 17
+      },
+      "elements": {
+        "g": 1,
+        "path": 24
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "book.S.main",
+      "objectId": "book",
+      "name": "Книга",
+      "figmaName": "Group 2136136335",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:3810",
+      "bbox": {
+        "x": 268.39,
+        "y": 2060.39,
+        "w": 722.95,
+        "h": 488.33
+      },
+      "svgSize": {
+        "w": 722.946,
+        "h": 488.332
+      },
+      "file": "S/main/book.svg",
+      "colors": [
+        "#181817",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#FFFFFF": 13,
+        "#181817": 9,
+        "#F9A3AA": 3,
+        "#F9ECB0": 26
+      },
+      "elements": {
+        "g": 2,
+        "path": 51
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "phone.S.main",
+      "objectId": "phone",
+      "name": "Телефон",
+      "figmaName": "Телефон",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:4746",
+      "bbox": {
+        "x": 1294.23,
+        "y": 2253.16,
+        "w": 398.27,
+        "h": 230.83
+      },
+      "svgSize": {
+        "w": 398.266,
+        "h": 230.834
+      },
+      "file": "S/main/phone.svg",
+      "colors": [
+        "#181817",
+        "#7864D7",
+        "#D7CDF5",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 56,
+        "#FFFFFF": 4,
+        "#F9ECB0": 1,
+        "#7864D7": 34,
+        "#D7CDF5": 1
+      },
+      "elements": {
+        "g": 1,
+        "path": 96
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "puzzle.S.main",
+      "objectId": "puzzle",
+      "name": "Пазлы",
+      "figmaName": "Пазлы",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:4903",
+      "bbox": {
+        "x": 1925.34,
+        "y": 2284.12,
+        "w": 272.08,
+        "h": 156.77
+      },
+      "svgSize": {
+        "w": 272.082,
+        "h": 156.767
+      },
+      "file": "S/main/puzzle.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 22,
+        "#F9ECB0": 2,
+        "#FFFFFF": 26,
+        "#F9A3AA": 4,
+        "#D7CDF5": 3
+      },
+      "elements": {
+        "g": 1,
+        "path": 57
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "coin.S.main",
+      "objectId": "coin",
+      "name": "Монета",
+      "figmaName": "Монета",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:5345",
+      "bbox": {
+        "x": 2498.23,
+        "y": 2339.8,
+        "w": 152.39,
+        "h": 100.2
+      },
+      "svgSize": {
+        "w": 152.391,
+        "h": 100.202
+      },
+      "file": "S/main/coin.svg",
+      "colors": [
+        "#181817",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#FFFFFF": 13,
+        "#F9ECB0": 24,
+        "#181817": 93
+      },
+      "elements": {
+        "g": 1,
+        "path": 130
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "headphones.S.main",
+      "objectId": "headphones",
+      "name": "Наушники",
+      "figmaName": "Наушники",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:5089",
+      "bbox": {
+        "x": 374.86,
+        "y": 2935.98,
+        "w": 444.07,
+        "h": 345.77
+      },
+      "svgSize": {
+        "w": 444.075,
+        "h": 345.771
+      },
+      "file": "S/main/headphones.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 19,
+        "#FFFFFF": 13,
+        "#D7CDF5": 47
+      },
+      "elements": {
+        "g": 1,
+        "path": 79
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "lamp.S.main",
+      "objectId": "lamp",
+      "name": "Лампа",
+      "figmaName": "Лампа",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:5485",
+      "bbox": {
+        "x": 1192.0,
+        "y": 2818.27,
+        "w": 472.97,
+        "h": 564.49
+      },
+      "svgSize": {
+        "w": 472.972,
+        "h": 564.493
+      },
+      "file": "S/main/lamp.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 4,
+        "#FFFFFF": 10,
+        "#D7CDF5": 6,
+        "#F9ECB0": 5,
+        "#F9A3AA": 2
+      },
+      "elements": {
+        "g": 1,
+        "path": 27
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "flowers.S.main",
+      "objectId": "flowers",
+      "name": "Цветы (ваза)",
+      "figmaName": "Group 2136136345",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "28:11629",
+      "bbox": {
+        "x": 1918.91,
+        "y": 2948.58,
+        "w": 323.26,
+        "h": 408.95
+      },
+      "svgSize": {
+        "w": 323.265,
+        "h": 408.947
+      },
+      "file": "S/main/flowers.svg",
+      "colors": [
+        "#181817",
+        "#AA9BF0",
+        "#F9A3AA",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 26,
+        "#FFFFFF": 34,
+        "#F9ECB0": 30,
+        "#AA9BF0": 18,
+        "#F9A3AA": 23
+      },
+      "elements": {
+        "g": 1,
+        "path": 131
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "wallet.S.main",
+      "objectId": "wallet",
+      "name": "Кошелек",
+      "figmaName": "Кошелек",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:4594",
+      "bbox": {
+        "x": 2399.5,
+        "y": 3187.65,
+        "w": 315.21,
+        "h": 198.15
+      },
+      "svgSize": {
+        "w": 315.208,
+        "h": 198.155
+      },
+      "file": "S/main/wallet.svg",
+      "colors": [
+        "#181817",
+        "#D7CDF5",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 16,
+        "#181817": 54,
+        "#F9ECB0": 8,
+        "#FFFFFF": 5
+      },
+      "elements": {
+        "g": 1,
+        "path": 83
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "folder.S.main",
+      "objectId": "folder",
+      "name": "Папка",
+      "figmaName": "Group 2136136337",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:4430",
+      "bbox": {
+        "x": 261.27,
+        "y": 3741.49,
+        "w": 620.31,
+        "h": 329.29
+      },
+      "svgSize": {
+        "w": 620.309,
+        "h": 329.294
+      },
+      "file": "S/main/folder.svg",
+      "colors": [
+        "#181817",
+        "#F9ECB0",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#F9ECB0": 11,
+        "#181817": 3,
+        "#FFFFFF": 6
+      },
+      "elements": {
+        "g": 1,
+        "path": 20
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "pen.S.main",
+      "objectId": "pen",
+      "name": "Ручка",
+      "figmaName": "Group 2136136336",
+      "size": "S",
+      "role": "main",
+      "scheme": "lilac",
+      "nodeId": "24:4287",
+      "bbox": {
+        "x": 1298.06,
+        "y": 3857.54,
+        "w": 254.21,
+        "h": 142.7
+      },
+      "svgSize": {
+        "w": 254.214,
+        "h": 142.7
+      },
+      "file": "S/main/pen.svg",
+      "colors": [
+        "#181817",
+        "#F9A3AA",
+        "#FFFFFF"
+      ],
+      "colorCounts": {
+        "#181817": 7,
+        "#FFFFFF": 16,
+        "#F9A3AA": 1
+      },
+      "elements": {
+        "g": 1,
+        "path": 24
+      },
+      "unknownColors": []
+    },
+    {
+      "id": "book.S.background",
+      "objectId": "book",
+      "name": "Книга",
+      "figmaName": "Group 2136136341",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6934",
+      "bbox": {
+        "x": 268.39,
+        "y": 5161.8,
+        "w": 722.95,
+        "h": 488.33
+      },
+      "svgSize": {
+        "w": 722.946,
+        "h": 488.332
+      },
+      "file": "S/background/book.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 42,
+        "#7864D7": 12
+      },
+      "elements": {
+        "g": 2,
+        "path": 54
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "phone.S.background",
+      "objectId": "phone",
+      "name": "Телефон",
+      "figmaName": "Телефон",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:6990",
+      "bbox": {
+        "x": 1294.23,
+        "y": 5354.57,
+        "w": 398.27,
+        "h": 230.83
+      },
+      "svgSize": {
+        "w": 398.266,
+        "h": 230.834
+      },
+      "file": "S/background/phone.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 93,
+        "#D7CDF5": 62
+      },
+      "elements": {
+        "g": 1,
+        "path": 155
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "puzzle.S.background",
+      "objectId": "puzzle",
+      "name": "Пазлы",
+      "figmaName": "Пазлы",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7147",
+      "bbox": {
+        "x": 1925.34,
+        "y": 5385.52,
+        "w": 272.08,
+        "h": 156.77
+      },
+      "svgSize": {
+        "w": 272.082,
+        "h": 156.767
+      },
+      "file": "S/background/puzzle.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 22,
+        "#D7CDF5": 35
+      },
+      "elements": {
+        "g": 1,
+        "path": 57
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "coin.S.background",
+      "objectId": "coin",
+      "name": "Монета",
+      "figmaName": "Монета",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7205",
+      "bbox": {
+        "x": 2498.23,
+        "y": 5441.21,
+        "w": 152.39,
+        "h": 100.2
+      },
+      "svgSize": {
+        "w": 152.39,
+        "h": 100.202
+      },
+      "file": "S/background/coin.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 38,
+        "#7864D7": 98
+      },
+      "elements": {
+        "g": 1,
+        "path": 136
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "headphones.S.background",
+      "objectId": "headphones",
+      "name": "Наушники",
+      "figmaName": "Наушники",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7344",
+      "bbox": {
+        "x": 374.86,
+        "y": 6037.39,
+        "w": 444.07,
+        "h": 345.77
+      },
+      "svgSize": {
+        "w": 444.075,
+        "h": 345.771
+      },
+      "file": "S/background/headphones.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 20,
+        "#D7CDF5": 64
+      },
+      "elements": {
+        "g": 1,
+        "path": 84
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "lamp.S.background",
+      "objectId": "lamp",
+      "name": "Лампа",
+      "figmaName": "Лампа",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7429",
+      "bbox": {
+        "x": 1192.0,
+        "y": 5919.67,
+        "w": 472.97,
+        "h": 564.49
+      },
+      "svgSize": {
+        "w": 472.972,
+        "h": 564.493
+      },
+      "file": "S/background/lamp.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 4,
+        "#D7CDF5": 23
+      },
+      "elements": {
+        "g": 1,
+        "path": 27
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "flowers.S.background",
+      "objectId": "flowers",
+      "name": "Цветы (ваза)",
+      "figmaName": "Group 2136136346",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "28:11766",
+      "bbox": {
+        "x": 1891.27,
+        "y": 6051.98,
+        "w": 323.26,
+        "h": 408.95
+      },
+      "svgSize": {
+        "w": 323.265,
+        "h": 408.947
+      },
+      "file": "S/background/flowers.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 26,
+        "#D7CDF5": 105
+      },
+      "elements": {
+        "g": 1,
+        "path": 131
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "wallet.S.background",
+      "objectId": "wallet",
+      "name": "Кошелек",
+      "figmaName": "Кошелек",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7568",
+      "bbox": {
+        "x": 2399.5,
+        "y": 6289.05,
+        "w": 315.21,
+        "h": 198.15
+      },
+      "svgSize": {
+        "w": 315.208,
+        "h": 198.155
+      },
+      "file": "S/background/wallet.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 31,
+        "#7864D7": 55
+      },
+      "elements": {
+        "g": 1,
+        "path": 86
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "folder.S.background",
+      "objectId": "folder",
+      "name": "Папка",
+      "figmaName": "Group 2136136342",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7520",
+      "bbox": {
+        "x": 261.27,
+        "y": 6842.9,
+        "w": 620.31,
+        "h": 329.29
+      },
+      "svgSize": {
+        "w": 620.309,
+        "h": 329.294
+      },
+      "file": "S/background/folder.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#D7CDF5": 18,
+        "#7864D7": 4
+      },
+      "elements": {
+        "g": 1,
+        "path": 22
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    },
+    {
+      "id": "pen.S.background",
+      "objectId": "pen",
+      "name": "Ручка",
+      "figmaName": "Group 2136136343",
+      "size": "S",
+      "role": "background",
+      "scheme": "lilac",
+      "nodeId": "24:7543",
+      "bbox": {
+        "x": 1298.06,
+        "y": 6958.94,
+        "w": 254.21,
+        "h": 142.7
+      },
+      "svgSize": {
+        "w": 254.214,
+        "h": 142.7
+      },
+      "file": "S/background/pen.svg",
+      "colors": [
+        "#7864D7",
+        "#D7CDF5"
+      ],
+      "colorCounts": {
+        "#7864D7": 7,
+        "#D7CDF5": 17
+      },
+      "elements": {
+        "g": 1,
+        "path": 24
+      },
+      "unknownColors": [],
+      "objColorsInBackground": []
+    }
+  ],
+  "backgrounds": [
+    {
+      "id": "bg.lilac.L",
+      "scheme": "lilac",
+      "size": "L",
+      "nodeId": "21:25258",
+      "frame": {
+        "w": 1000.0,
+        "h": 1000.0
+      },
+      "file": "backgrounds/lilac.L.svg",
+      "colors": [
+        "#7864D7",
+        "#AA9BF0",
+        "#D7CDF5",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "bg.lilac.S",
+      "scheme": "lilac",
+      "size": "S",
+      "nodeId": "24:5990",
+      "frame": {
+        "w": 500.0,
+        "h": 500.0
+      },
+      "file": "backgrounds/lilac.S.svg",
+      "colors": [
+        "#7864D7",
+        "#AA9BF0",
+        "#D7CDF5",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "bg.peach.L",
+      "scheme": "peach",
+      "size": "L",
+      "nodeId": "21:25399",
+      "frame": {
+        "w": 1000.0,
+        "h": 1000.0
+      },
+      "file": "backgrounds/peach.L.svg",
+      "colors": [
+        "#D27532",
+        "#FAC896",
+        "#FDD7B9",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "bg.peach.S",
+      "scheme": "peach",
+      "size": "S",
+      "nodeId": "24:6120",
+      "frame": {
+        "w": 500.0,
+        "h": 500.0
+      },
+      "file": "backgrounds/peach.S.svg",
+      "colors": [
+        "#D27532",
+        "#FAC896",
+        "#FDD7B9",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "bg.teal.L",
+      "scheme": "teal",
+      "size": "L",
+      "nodeId": "21:29593",
+      "frame": {
+        "w": 1000.0,
+        "h": 1000.0
+      },
+      "file": "backgrounds/teal.L.svg",
+      "colors": [
+        "#5ABEBE",
+        "#80DADA",
+        "#BEEBEB",
+        "#FFFFFF"
+      ]
+    },
+    {
+      "id": "bg.teal.S",
+      "scheme": "teal",
+      "size": "S",
+      "nodeId": "24:6055",
+      "frame": {
+        "w": 500.0,
+        "h": 500.0
+      },
+      "file": "backgrounds/teal.S.svg",
+      "colors": [
+        "#5ABEBE",
+        "#80DADA",
+        "#BEEBEB",
+        "#FFFFFF"
+      ]
+    }
+  ]
+}

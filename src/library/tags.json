@@ -1,0 +1,52 @@
+{
+  "book": {
+    "name": { "ru": "Книга", "en": "Book" },
+    "synonyms": ["книга", "книги", "книгу", "книгой", "book", "books"],
+    "tags": ["знания", "учёба", "чтение", "education"]
+  },
+  "phone": {
+    "name": { "ru": "Телефон", "en": "Phone" },
+    "synonyms": ["телефон", "телефона", "смартфон", "phone", "smartphone"],
+    "tags": ["связь", "онлайн", "технологии", "communication"]
+  },
+  "puzzle": {
+    "name": { "ru": "Пазлы", "en": "Puzzles" },
+    "synonyms": ["пазл", "пазлы", "пазла", "puzzle", "puzzles"],
+    "tags": ["задача", "решение", "логика", "problem"]
+  },
+  "coin": {
+    "name": { "ru": "Монета", "en": "Coin" },
+    "synonyms": ["монета", "монеты", "монету", "coin", "coins"],
+    "tags": ["деньги", "финансы", "оплата", "money"]
+  },
+  "headphones": {
+    "name": { "ru": "Наушники", "en": "Headphones" },
+    "synonyms": ["наушники", "наушников", "headphones", "headset"],
+    "tags": ["музыка", "звук", "аудио", "music"]
+  },
+  "lamp": {
+    "name": { "ru": "Лампа", "en": "Lamp" },
+    "synonyms": ["лампа", "лампы", "лампу", "lamp", "lamps"],
+    "tags": ["идея", "свет", "работа", "idea"]
+  },
+  "flowers": {
+    "name": { "ru": "Цветы (ваза)", "en": "Flowers" },
+    "synonyms": ["цветы", "цветок", "ваза", "тюльпан", "flowers", "vase"],
+    "tags": ["подарок", "природа", "дом", "gift"]
+  },
+  "wallet": {
+    "name": { "ru": "Кошелек", "en": "Wallet" },
+    "synonyms": ["кошелек", "кошелёк", "кошелька", "wallet"],
+    "tags": ["деньги", "покупки", "хранение", "shopping"]
+  },
+  "folder": {
+    "name": { "ru": "Папка", "en": "Folder" },
+    "synonyms": ["папка", "папки", "папку", "folder", "folders"],
+    "tags": ["документы", "работа", "архив", "documents"]
+  },
+  "pen": {
+    "name": { "ru": "Ручка", "en": "Pen" },
+    "synonyms": ["ручка", "ручки", "ручку", "pen", "pens"],
+    "tags": ["письмо", "учёба", "заметки", "writing"]
+  }
+}

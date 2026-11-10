@@ -1,0 +1,92 @@
+{
+  "note": "Плашки из Figma: левый столбец «Цвета фона» (сверху вниз), правый «Цвета объектов». bg.base = заливка кадра фона. Отдельного 9-го цвета нет. paper (#FFFFFF) в Figma стоит в столбце объектов (с чёрной обводкой).",
+  "source": {
+    "L": [
+      "21:29569",
+      "21:29570",
+      "21:29579"
+    ],
+    "S": [
+      "24:6124",
+      "24:6133",
+      "24:6142"
+    ]
+  },
+  "schemes": [
+    {
+      "id": "lilac",
+      "background": [
+        "#D7CDF5",
+        "#AA9BF0",
+        "#7864D7",
+        "#181817"
+      ],
+      "objects": [
+        "#F9ECB0",
+        "#F9A3AA",
+        "#FFE3E1",
+        "#FFFFFF"
+      ],
+      "slots": {
+        "bg.base": "#D7CDF5",
+        "bg.mid": "#AA9BF0",
+        "bg.dark": "#7864D7",
+        "ink": "#181817",
+        "obj.1": "#F9ECB0",
+        "obj.2": "#F9A3AA",
+        "obj.3": "#FFE3E1",
+        "paper": "#FFFFFF"
+      }
+    },
+    {
+      "id": "peach",
+      "background": [
+        "#FDD7B9",
+        "#FAC896",
+        "#D27532",
+        "#181817"
+      ],
+      "objects": [
+        "#F9ECB0",
+        "#80DADA",
+        "#BEEBEB",
+        "#FFFFFF"
+      ],
+      "slots": {
+        "bg.base": "#FDD7B9",
+        "bg.mid": "#FAC896",
+        "bg.dark": "#D27532",
+        "ink": "#181817",
+        "obj.1": "#F9ECB0",
+        "obj.2": "#80DADA",
+        "obj.3": "#BEEBEB",
+        "paper": "#FFFFFF"
+      }
+    },
+    {
+      "id": "teal",
+      "background": [
+        "#BEEBEB",
+        "#80DADA",
+        "#5ABEBE",
+        "#181817"
+      ],
+      "objects": [
+        "#FFD4F2",
+        "#6D7BFC",
+        "#B6C6FE",
+        "#FFFFFF"
+      ],
+      "slots": {
+        "bg.base": "#BEEBEB",
+        "bg.mid": "#80DADA",
+        "bg.dark": "#5ABEBE",
+        "ink": "#181817",
+        "obj.1": "#FFD4F2",
+        "obj.2": "#6D7BFC",
+        "obj.3": "#B6C6FE",
+        "paper": "#FFFFFF"
+      }
+    }
+  ]
+}

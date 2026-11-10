@@ -1,0 +1,1135 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "objectId": "book",
+      "name": {
+        "ru": "Книга",
+        "en": "Book"
+      },
+      "synonyms": [
+        "книга",
+        "книги",
+        "книгу",
+        "книгой",
+        "book",
+        "books"
+      ],
+      "tags": [
+        "знания",
+        "учёба",
+        "чтение",
+        "education"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/book.svg",
+          "viewBox": [
+            0,
+            0,
+            1445.89,
+            976.664
+          ],
+          "svgSize": {
+            "w": 1445.89,
+            "h": 976.664
+          },
+          "nodeId": "21:29965",
+          "colors": [
+            "#181817",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffe3e1",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/book.svg",
+          "viewBox": [
+            0,
+            0,
+            1445.89,
+            976.664
+          ],
+          "svgSize": {
+            "w": 1445.89,
+            "h": 976.664
+          },
+          "nodeId": "24:6273",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/book.svg",
+          "viewBox": [
+            0,
+            0,
+            722.946,
+            488.332
+          ],
+          "svgSize": {
+            "w": 722.946,
+            "h": 488.332
+          },
+          "nodeId": "24:3810",
+          "colors": [
+            "#181817",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/book.svg",
+          "viewBox": [
+            0,
+            0,
+            722.946,
+            488.332
+          ],
+          "svgSize": {
+            "w": 722.946,
+            "h": 488.332
+          },
+          "nodeId": "24:6934",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "phone",
+      "name": {
+        "ru": "Телефон",
+        "en": "Phone"
+      },
+      "synonyms": [
+        "телефон",
+        "телефона",
+        "смартфон",
+        "phone",
+        "smartphone"
+      ],
+      "tags": [
+        "связь",
+        "онлайн",
+        "технологии",
+        "communication"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/phone.svg",
+          "viewBox": [
+            0,
+            0,
+            796.532,
+            461.667
+          ],
+          "svgSize": {
+            "w": 796.532,
+            "h": 461.667
+          },
+          "nodeId": "21:25472",
+          "colors": [
+            "#181817",
+            "#7864d7",
+            "#d7cdf5",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/phone.svg",
+          "viewBox": [
+            0,
+            0,
+            796.532,
+            461.667
+          ],
+          "svgSize": {
+            "w": 796.532,
+            "h": 461.667
+          },
+          "nodeId": "24:6327",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/phone.svg",
+          "viewBox": [
+            0,
+            0,
+            398.266,
+            230.834
+          ],
+          "svgSize": {
+            "w": 398.266,
+            "h": 230.834
+          },
+          "nodeId": "24:4746",
+          "colors": [
+            "#181817",
+            "#7864d7",
+            "#d7cdf5",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/phone.svg",
+          "viewBox": [
+            0,
+            0,
+            398.266,
+            230.834
+          ],
+          "svgSize": {
+            "w": 398.266,
+            "h": 230.834
+          },
+          "nodeId": "24:6990",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "puzzle",
+      "name": {
+        "ru": "Пазлы",
+        "en": "Puzzles"
+      },
+      "synonyms": [
+        "пазл",
+        "пазлы",
+        "пазла",
+        "puzzle",
+        "puzzles"
+      ],
+      "tags": [
+        "задача",
+        "решение",
+        "логика",
+        "problem"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/puzzle.svg",
+          "viewBox": [
+            0,
+            0,
+            544.163,
+            313.534
+          ],
+          "svgSize": {
+            "w": 544.163,
+            "h": 313.534
+          },
+          "nodeId": "21:417",
+          "colors": [
+            "#181817",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/puzzle.svg",
+          "viewBox": [
+            0,
+            0,
+            544.163,
+            313.534
+          ],
+          "svgSize": {
+            "w": 544.163,
+            "h": 313.534
+          },
+          "nodeId": "24:6214",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/puzzle.svg",
+          "viewBox": [
+            0,
+            0,
+            272.082,
+            156.767
+          ],
+          "svgSize": {
+            "w": 272.082,
+            "h": 156.767
+          },
+          "nodeId": "24:4903",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/puzzle.svg",
+          "viewBox": [
+            0,
+            0,
+            272.082,
+            156.767
+          ],
+          "svgSize": {
+            "w": 272.082,
+            "h": 156.767
+          },
+          "nodeId": "24:7147",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "coin",
+      "name": {
+        "ru": "Монета",
+        "en": "Coin"
+      },
+      "synonyms": [
+        "монета",
+        "монеты",
+        "монету",
+        "coin",
+        "coins"
+      ],
+      "tags": [
+        "деньги",
+        "финансы",
+        "оплата",
+        "money"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/coin.svg",
+          "viewBox": [
+            0,
+            0,
+            286.677,
+            188.501
+          ],
+          "svgSize": {
+            "w": 286.677,
+            "h": 188.501
+          },
+          "nodeId": "24:2207",
+          "colors": [
+            "#181817",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/coin.svg",
+          "viewBox": [
+            0,
+            0,
+            286.677,
+            188.501
+          ],
+          "svgSize": {
+            "w": 286.677,
+            "h": 188.501
+          },
+          "nodeId": "24:6795",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/coin.svg",
+          "viewBox": [
+            0,
+            0,
+            152.391,
+            100.202
+          ],
+          "svgSize": {
+            "w": 152.391,
+            "h": 100.202
+          },
+          "nodeId": "24:5345",
+          "colors": [
+            "#181817",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/coin.svg",
+          "viewBox": [
+            0,
+            0,
+            152.39,
+            100.202
+          ],
+          "svgSize": {
+            "w": 152.39,
+            "h": 100.202
+          },
+          "nodeId": "24:7205",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "headphones",
+      "name": {
+        "ru": "Наушники",
+        "en": "Headphones"
+      },
+      "synonyms": [
+        "наушники",
+        "наушников",
+        "headphones",
+        "headset"
+      ],
+      "tags": [
+        "музыка",
+        "звук",
+        "аудио",
+        "music"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/headphones.svg",
+          "viewBox": [
+            0,
+            0,
+            888.15,
+            691.542
+          ],
+          "svgSize": {
+            "w": 888.15,
+            "h": 691.542
+          },
+          "nodeId": "23:122",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/headphones.svg",
+          "viewBox": [
+            0,
+            0,
+            888.15,
+            691.542
+          ],
+          "svgSize": {
+            "w": 888.15,
+            "h": 691.542
+          },
+          "nodeId": "24:6484",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/headphones.svg",
+          "viewBox": [
+            0,
+            0,
+            444.075,
+            345.771
+          ],
+          "svgSize": {
+            "w": 444.075,
+            "h": 345.771
+          },
+          "nodeId": "24:5089",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/headphones.svg",
+          "viewBox": [
+            0,
+            0,
+            444.075,
+            345.771
+          ],
+          "svgSize": {
+            "w": 444.075,
+            "h": 345.771
+          },
+          "nodeId": "24:7344",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "lamp",
+      "name": {
+        "ru": "Лампа",
+        "en": "Lamp"
+      },
+      "synonyms": [
+        "лампа",
+        "лампы",
+        "лампу",
+        "lamp",
+        "lamps"
+      ],
+      "tags": [
+        "идея",
+        "свет",
+        "работа",
+        "idea"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/lamp.svg",
+          "viewBox": [
+            0,
+            0,
+            945.943,
+            1128.99
+          ],
+          "svgSize": {
+            "w": 945.943,
+            "h": 1128.99
+          },
+          "nodeId": "23:121",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/lamp.svg",
+          "viewBox": [
+            0,
+            0,
+            945.943,
+            1128.99
+          ],
+          "svgSize": {
+            "w": 945.943,
+            "h": 1128.99
+          },
+          "nodeId": "24:6569",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/lamp.svg",
+          "viewBox": [
+            0,
+            0,
+            472.972,
+            564.493
+          ],
+          "svgSize": {
+            "w": 472.972,
+            "h": 564.493
+          },
+          "nodeId": "24:5485",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/lamp.svg",
+          "viewBox": [
+            0,
+            0,
+            472.972,
+            564.493
+          ],
+          "svgSize": {
+            "w": 472.972,
+            "h": 564.493
+          },
+          "nodeId": "24:7429",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "flowers",
+      "name": {
+        "ru": "Цветы (ваза)",
+        "en": "Flowers"
+      },
+      "synonyms": [
+        "цветы",
+        "цветок",
+        "ваза",
+        "тюльпан",
+        "flowers",
+        "vase"
+      ],
+      "tags": [
+        "подарок",
+        "природа",
+        "дом",
+        "gift"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/flowers.svg",
+          "viewBox": [
+            0,
+            0,
+            590.573,
+            747.106
+          ],
+          "svgSize": {
+            "w": 590.573,
+            "h": 747.106
+          },
+          "nodeId": "28:11628",
+          "colors": [
+            "#181817",
+            "#aa9bf0",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/flowers.svg",
+          "viewBox": [
+            0,
+            0,
+            590.573,
+            747.106
+          ],
+          "svgSize": {
+            "w": 590.573,
+            "h": 747.106
+          },
+          "nodeId": "30:11902",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/flowers.svg",
+          "viewBox": [
+            0,
+            0,
+            323.265,
+            408.947
+          ],
+          "svgSize": {
+            "w": 323.265,
+            "h": 408.947
+          },
+          "nodeId": "28:11629",
+          "colors": [
+            "#181817",
+            "#aa9bf0",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/flowers.svg",
+          "viewBox": [
+            0,
+            0,
+            323.265,
+            408.947
+          ],
+          "svgSize": {
+            "w": 323.265,
+            "h": 408.947
+          },
+          "nodeId": "28:11766",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "wallet",
+      "name": {
+        "ru": "Кошелек",
+        "en": "Wallet"
+      },
+      "synonyms": [
+        "кошелек",
+        "кошелёк",
+        "кошелька",
+        "wallet"
+      ],
+      "tags": [
+        "деньги",
+        "покупки",
+        "хранение",
+        "shopping"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/wallet.svg",
+          "viewBox": [
+            0,
+            0,
+            630.416,
+            396.31
+          ],
+          "svgSize": {
+            "w": 630.416,
+            "h": 396.31
+          },
+          "nodeId": "23:211",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/wallet.svg",
+          "viewBox": [
+            0,
+            0,
+            630.416,
+            396.31
+          ],
+          "svgSize": {
+            "w": 630.416,
+            "h": 396.31
+          },
+          "nodeId": "24:6660",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/wallet.svg",
+          "viewBox": [
+            0,
+            0,
+            315.208,
+            198.155
+          ],
+          "svgSize": {
+            "w": 315.208,
+            "h": 198.155
+          },
+          "nodeId": "24:4594",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/wallet.svg",
+          "viewBox": [
+            0,
+            0,
+            315.208,
+            198.155
+          ],
+          "svgSize": {
+            "w": 315.208,
+            "h": 198.155
+          },
+          "nodeId": "24:7568",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "folder",
+      "name": {
+        "ru": "Папка",
+        "en": "Folder"
+      },
+      "synonyms": [
+        "папка",
+        "папки",
+        "папку",
+        "folder",
+        "folders"
+      ],
+      "tags": [
+        "документы",
+        "работа",
+        "архив",
+        "documents"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/folder.svg",
+          "viewBox": [
+            0,
+            0,
+            1240.62,
+            658.588
+          ],
+          "svgSize": {
+            "w": 1240.62,
+            "h": 658.588
+          },
+          "nodeId": "24:1899",
+          "colors": [
+            "#181817",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/folder.svg",
+          "viewBox": [
+            0,
+            0,
+            1240.62,
+            658.588
+          ],
+          "svgSize": {
+            "w": 1240.62,
+            "h": 658.588
+          },
+          "nodeId": "24:6772",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/folder.svg",
+          "viewBox": [
+            0,
+            0,
+            620.309,
+            329.294
+          ],
+          "svgSize": {
+            "w": 620.309,
+            "h": 329.294
+          },
+          "nodeId": "24:4430",
+          "colors": [
+            "#181817",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/folder.svg",
+          "viewBox": [
+            0,
+            0,
+            620.309,
+            329.294
+          ],
+          "svgSize": {
+            "w": 620.309,
+            "h": 329.294
+          },
+          "nodeId": "24:7520",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    },
+    {
+      "objectId": "pen",
+      "name": {
+        "ru": "Ручка",
+        "en": "Pen"
+      },
+      "synonyms": [
+        "ручка",
+        "ручки",
+        "ручку",
+        "pen",
+        "pens"
+      ],
+      "tags": [
+        "письмо",
+        "учёба",
+        "заметки",
+        "writing"
+      ],
+      "sourceSchemeId": "lilac",
+      "assets": [
+        {
+          "size": "L",
+          "role": "main",
+          "src": "/src/assets/library/L/main/pen.svg",
+          "viewBox": [
+            0,
+            0,
+            508.428,
+            285.4
+          ],
+          "svgSize": {
+            "w": 508.428,
+            "h": 285.4
+          },
+          "nodeId": "24:1734",
+          "colors": [
+            "#181817",
+            "#d7cdf5",
+            "#f9a3aa",
+            "#f9ecb0",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "L",
+          "role": "background",
+          "src": "/src/assets/library/L/background/pen.svg",
+          "viewBox": [
+            0,
+            0,
+            508.428,
+            285.4
+          ],
+          "svgSize": {
+            "w": 508.428,
+            "h": 285.4
+          },
+          "nodeId": "24:6747",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "main",
+          "src": "/src/assets/library/S/main/pen.svg",
+          "viewBox": [
+            0,
+            0,
+            254.214,
+            142.7
+          ],
+          "svgSize": {
+            "w": 254.214,
+            "h": 142.7
+          },
+          "nodeId": "24:4287",
+          "colors": [
+            "#181817",
+            "#f9a3aa",
+            "#ffffff"
+          ]
+        },
+        {
+          "size": "S",
+          "role": "background",
+          "src": "/src/assets/library/S/background/pen.svg",
+          "viewBox": [
+            0,
+            0,
+            254.214,
+            142.7
+          ],
+          "svgSize": {
+            "w": 254.214,
+            "h": 142.7
+          },
+          "nodeId": "24:7543",
+          "colors": [
+            "#7864d7",
+            "#d7cdf5"
+          ]
+        }
+      ]
+    }
+  ],
+  "schemes": [
+    {
+      "id": "lilac",
+      "name": "lilac",
+      "colors": {
+        "bg.base": "#d7cdf5",
+        "bg.mid": "#aa9bf0",
+        "bg.dark": "#7864d7",
+        "ink": "#181817",
+        "obj.1": "#f9ecb0",
+        "obj.2": "#f9a3aa",
+        "obj.3": "#ffe3e1",
+        "paper": "#ffffff"
+      },
+      "backgroundAsset": {
+        "L": "/src/assets/backgrounds/lilac.L.svg",
+        "S": "/src/assets/backgrounds/lilac.S.svg"
+      }
+    },
+    {
+      "id": "peach",
+      "name": "peach",
+      "colors": {
+        "bg.base": "#fdd7b9",
+        "bg.mid": "#fac896",
+        "bg.dark": "#d27532",
+        "ink": "#181817",
+        "obj.1": "#f9ecb0",
+        "obj.2": "#80dada",
+        "obj.3": "#beebeb",
+        "paper": "#ffffff"
+      },
+      "backgroundAsset": {
+        "L": "/src/assets/backgrounds/peach.L.svg",
+        "S": "/src/assets/backgrounds/peach.S.svg"
+      }
+    },
+    {
+      "id": "teal",
+      "name": "teal",
+      "colors": {
+        "bg.base": "#beebeb",
+        "bg.mid": "#80dada",
+        "bg.dark": "#5abebe",
+        "ink": "#181817",
+        "obj.1": "#ffd4f2",
+        "obj.2": "#6d7bfc",
+        "obj.3": "#b6c6fe",
+        "paper": "#ffffff"
+      },
+      "backgroundAsset": {
+        "L": "/src/assets/backgrounds/teal.L.svg",
+        "S": "/src/assets/backgrounds/teal.S.svg"
+      }
+    }
+  ]
+}
