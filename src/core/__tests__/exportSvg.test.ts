@@ -111,11 +111,18 @@ function expectDocument(markup: string, composition: Composition) {
   expect(markup).not.toMatch(/foreignObject/);
   expect(markup).not.toMatch(/data:image/);
   expect(markup).not.toMatch(/data-selection/);
-  expect(doc.querySelector('clipPath#frame')).toBeTruthy();
-  expect(doc.querySelector('g[clip-path="url(#frame)"]')).toBeTruthy();
+  expect(doc.querySelector('clipPath#frame-clip')).toBeTruthy();
+  const compositionGroup = doc.querySelector('g#composition');
+  expect(compositionGroup?.getAttribute('data-name')).toBe('composition');
+  expect(compositionGroup?.getAttribute('clip-path')).toBe('url(#frame-clip)');
+  expect(root.getAttribute('fill')).toBe('none');
+  expect(root.getAttribute('style')).toBeNull();
 
   const ids = elements(doc, '[id]').map((node) => node.id);
   expect(new Set(ids).size).toBe(ids.length);
+  for (const id of ids) {
+    expect(id, id).toMatch(/^[A-Za-z0-9_-]+$/);
+  }
 
   const groups = elements(doc, 'g[data-object]');
   expect(groups.map((node) => node.getAttribute('data-object')).sort()).toEqual(
