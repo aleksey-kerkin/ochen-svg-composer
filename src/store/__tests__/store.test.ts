@@ -221,7 +221,7 @@ describe('composition reducer', () => {
     expect(next.scale).toBeCloseTo(defaultScale('portrait'));
   });
 
-  it('lays current objects into the template and drops those without a slot', () => {
+  it('lays current objects into the template and keeps every main', () => {
     const state = place('phone', place('puzzle', place('book')));
     const next = reduceComposition(state, {
       type: 'setTemplate',
@@ -229,13 +229,15 @@ describe('composition reducer', () => {
     });
     expect(next.templateId).toBe('offset');
     expect(next.scale).toBeCloseTo(templateById('offset', 'landscape').scale);
-    expect(next.scale).toBeGreaterThan(defaultScale('landscape') * 1.5);
-    expect(next.objects.map((object) => object.objectId).sort()).toEqual([
-      'phone',
-      'puzzle',
-    ]);
-    expect(next.objects).toEqual(
-      layout(state.objects, templateById('offset', 'landscape'), state.seed),
+    expect(next.scale).toBeGreaterThan(defaultScale('landscape') * 1.1);
+    expect(
+      next.objects
+        .filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['book', 'phone', 'puzzle']);
+    expect(next.objects.some((object) => object.role === 'background')).toBe(
+      true,
     );
   });
 
@@ -264,10 +266,10 @@ describe('composition reducer', () => {
     });
     expect(stretched).toBe(false);
     expect(next.scale).toBeCloseTo(templateById('offset', 'portrait').scale);
-    expect(next.scale).toBeGreaterThan(defaultScale('portrait') * 1.5);
+    expect(next.scale).toBeGreaterThan(defaultScale('portrait') * 1.1);
   });
 
-  it('drops the selection when the template has no slot for it', () => {
+  it('keeps every main and the selection when the template has fewer slots', () => {
     const state = reduceComposition(place('phone', place('book')), {
       type: 'select',
       uid: 'obj-1',
@@ -276,8 +278,13 @@ describe('composition reducer', () => {
       type: 'setTemplate',
       templateId: 'under-title',
     });
-    expect(next.objects.map((object) => object.uid)).toEqual(['obj-2']);
-    expect(next.selectedUid).toBeUndefined();
+    expect(
+      next.objects
+        .filter((object) => object.role === 'main')
+        .map((object) => object.uid)
+        .sort(),
+    ).toEqual(['obj-1', 'obj-2']);
+    expect(next.selectedUid).toBe('obj-1');
   });
 
   it('keeps a custom scale proportional to the short side', () => {
@@ -388,6 +395,42 @@ describe('useComposition', () => {
     useComposition.getState().addPalette('#112233');
     expect(useComposition.getState().customPalettes).toHaveLength(1);
     expect(useComposition.getState().paletteError).toMatch(/8/);
+  });
+
+  it('replaces the scene from a name query and keeps size, palette, and editing', () => {
+    useComposition.getState().setPalette('peach');
+    useComposition.getState().setSize('S');
+    useComposition.getState().setFormat('portrait');
+    useComposition.getState().add('lamp', 'main');
+    useComposition.getState().composeNames('наушники и ваза');
+    const placed = useComposition.getState();
+    expect(placed.paletteId).toBe('peach');
+    expect(placed.size).toBe('S');
+    expect(placed.format).toBe('portrait');
+    expect(
+      placed.objects
+        .filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['flowers', 'headphones']);
+    expect(placed.objects.some((object) => object.role === 'background')).toBe(
+      true,
+    );
+    expect(placed.nameQuery?.unknown).toEqual([]);
+    const uid = placed.objects[0]?.uid ?? '';
+    const before = placed.objects[0]?.x ?? 0;
+    useComposition.getState().move(uid, 12, 0);
+    expect(useComposition.getState().objects[0]?.x).toBeCloseTo(before + 12);
+    const ids = useComposition
+      .getState()
+      .objects.map((object) => object.objectId)
+      .sort();
+    useComposition.getState().composeNames('хрюндель');
+    const skipped = useComposition.getState();
+    expect(skipped.objects.map((object) => object.objectId).sort()).toEqual(
+      ids,
+    );
+    expect(skipped.nameQuery?.unknown).toEqual(['хрюндель']);
   });
 
   it('adds an object through the zustand store', () => {

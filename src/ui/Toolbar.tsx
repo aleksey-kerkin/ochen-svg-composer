@@ -22,6 +22,12 @@ export function Toolbar() {
   const scale = useComposition((state) => state.scale);
   const setFormat = useComposition((state) => state.setFormat);
   const setTemplate = useComposition((state) => state.setTemplate);
+  const withBackgrounds = useComposition(
+    (state) => state.withBackgrounds !== false,
+  );
+  const setWithBackgrounds = useComposition(
+    (state) => state.setWithBackgrounds,
+  );
   const setSize = useComposition((state) => state.setSize);
   const setScale = useComposition((state) => state.setScale);
   const setPalette = useComposition((state) => state.setPalette);
@@ -71,6 +77,16 @@ export function Toolbar() {
             {TEMPLATE_LABELS[id]}
           </button>
         ))}
+      </div>
+      <div className="toolbar__group" role="group" aria-label="Фон">
+        <button
+          type="button"
+          className="seg"
+          aria-pressed={withBackgrounds}
+          onClick={() => setWithBackgrounds(!withBackgrounds)}
+        >
+          С фоновыми объектами
+        </button>
       </div>
       <div className="toolbar__group" role="group" aria-label="Размер">
         {SIZES.map((entry) => (

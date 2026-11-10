@@ -1,9 +1,13 @@
 import { create } from 'zustand';
+import manifestJson from '../library/manifest.json' with { type: 'json' };
+import { composePlacements } from '../core/compose.ts';
+import { matchByNames, type NameQuery } from '../core/match.ts';
 import { parsePaletteInput } from '../core/palette.ts';
 import { schemeById, validatePaletteUsage } from '../core/recolor.ts';
 import type {
   Composition,
   FormatId,
+  Manifest,
   Palette,
   Role,
   Size,
@@ -14,9 +18,12 @@ import {
   type CompositionAction,
 } from './composition.ts';
 
+const library = manifestJson as Manifest;
+
 type CompositionStore = Composition & {
   customPalettes: Palette[];
   paletteError?: string;
+  nameQuery?: NameQuery;
   add: (objectId: string, role: Role) => void;
   move: (uid: string, dx: number, dy: number) => void;
   rotate: (uid: string, deg: number) => void;
@@ -33,6 +40,8 @@ type CompositionStore = Composition & {
   addPalette: (text: string) => void;
   toggleRole: (uid: string) => void;
   cycleColors: (uid: string) => void;
+  composeNames: (query: string) => void;
+  setWithBackgrounds: (enabled: boolean) => void;
   reseed: () => void;
 };
 
@@ -50,6 +59,9 @@ function readComposition(state: CompositionStore): Composition {
   }
   if (state.selectedUid !== undefined) {
     composition.selectedUid = state.selectedUid;
+  }
+  if (state.withBackgrounds !== undefined) {
+    composition.withBackgrounds = state.withBackgrounds;
   }
   return composition;
 }
@@ -138,5 +150,33 @@ export const useComposition = create<CompositionStore>((set) => ({
     set((state) => apply(state, { type: 'toggleRole', uid })),
   cycleColors: (uid) =>
     set((state) => apply(state, { type: 'cycleColors', uid })),
+  setWithBackgrounds: (enabled) =>
+    set((state) => apply(state, { type: 'setWithBackgrounds', enabled })),
+  composeNames: (query) =>
+    set((state) => {
+      const parsed = matchByNames(query, library.items);
+      if (parsed.matches.length === 0) {
+        return { ...state, nameQuery: parsed };
+      }
+      const composition = readComposition(state);
+      const composed = composePlacements(parsed.matches, {
+        format: composition.format,
+        ...(composition.templateId
+          ? { templateId: composition.templateId }
+          : {}),
+        seed: composition.seed,
+        withBackgrounds: composition.withBackgrounds !== false,
+      });
+      const next: CompositionStore = {
+        ...state,
+        ...composition,
+        templateId: composed.templateId,
+        scale: composed.scale,
+        objects: composed.objects,
+        nameQuery: parsed,
+      };
+      delete next.selectedUid;
+      return next;
+    }),
   reseed: () => set((state) => apply(state, { type: 'reseed' })),
 }));

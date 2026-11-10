@@ -1,3 +1,4 @@
+import { ensureBackdrop } from '../core/backdrop.ts';
 import { layout, templateById, type TemplateId } from '../core/layout.ts';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../model/formats.ts';
@@ -22,6 +23,7 @@ export type CompositionAction =
   | { type: 'select'; uid?: string }
   | { type: 'setFormat'; format: FormatId }
   | { type: 'setTemplate'; templateId: TemplateId }
+  | { type: 'setWithBackgrounds'; enabled: boolean }
   | { type: 'setSize'; size: Size }
   | { type: 'setScale'; scale: number }
   | { type: 'setPalette'; paletteId: string }
@@ -41,6 +43,7 @@ export function initialComposition(): Composition {
     scale: defaultScale('landscape'),
     objects: [],
     seed: 1,
+    withBackgrounds: true,
   };
 }
 
@@ -77,6 +80,8 @@ export function reduceComposition(
       return changeFormat(state, action.format);
     case 'setTemplate':
       return applyTemplate(state, action.templateId);
+    case 'setWithBackgrounds':
+      return changeBackdrop(state, action.enabled);
     case 'setScale':
       if (!Number.isFinite(action.scale) || action.scale <= 0) {
         throw new Error('scale must be a positive number');
@@ -119,11 +124,11 @@ function changeFormat(state: Composition, format: FormatId): Composition {
   if (state.format === format) return state;
   if (state.templateId) {
     const template = templateById(state.templateId, format);
+    const next = { ...state, format };
     return keepSelection({
-      ...state,
-      format,
+      ...next,
       scale: template.scale,
-      objects: layout(state.objects, template, state.seed),
+      objects: layout(objectsForTemplate(next), template, state.seed),
     });
   }
   const ratio = shortSide(format) / shortSide(state.format);
@@ -142,17 +147,33 @@ function changeFormat(state: Composition, format: FormatId): Composition {
   };
 }
 
+function objectsForTemplate(state: Composition): PlacedObject[] {
+  if (state.withBackgrounds === false) {
+    return state.objects.filter((object) => object.role === 'main');
+  }
+  return ensureBackdrop(state.objects, state.format);
+}
+
 function applyTemplate(
   state: Composition,
   templateId: TemplateId,
 ): Composition {
   const template = templateById(templateId, state.format);
+  const next = { ...state, templateId };
   return keepSelection({
-    ...state,
-    templateId,
+    ...next,
     scale: template.scale,
-    objects: layout(state.objects, template, state.seed),
+    objects: layout(objectsForTemplate(next), template, state.seed),
   });
+}
+
+function changeBackdrop(state: Composition, enabled: boolean): Composition {
+  const next = { ...state, withBackgrounds: enabled };
+  if (state.templateId) return applyTemplate(next, state.templateId);
+  const objects = enabled
+    ? ensureBackdrop(state.objects, state.format)
+    : state.objects.filter((object) => object.role === 'main');
+  return { ...next, objects };
 }
 
 function keepSelection(state: Composition): Composition {

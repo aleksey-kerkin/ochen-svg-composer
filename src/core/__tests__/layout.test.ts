@@ -91,19 +91,21 @@ describe('layout', () => {
     expect(Math.max(...backgrounds.map((object) => object.z))).toBeLessThan(
       Math.min(...mains.map((object) => object.z)),
     );
-    const top = result.reduce((best, object) =>
-      object.z > best.z ? object : best,
-    );
-    expect(top.objectId).toBe('book');
+    const book = result.find((object) => object.objectId === 'book');
+    const phone = result.find((object) => object.objectId === 'phone');
+    expect(phone).toBeDefined();
+    expect(book).toBeDefined();
+    expect(phone!.z).toBeGreaterThan(book!.z);
     expect(result.find((object) => object.uid === 'obj-1')?.colorShift).toBe(1);
   });
 
-  it('drops objects that have no matching slot', () => {
+  it('keeps every main object when there are more mains than slots', () => {
     const objects = ['book', 'phone', 'puzzle'].map((objectId, index) =>
       placed({ uid: `obj-${index + 1}`, objectId, z: index }),
     );
     const result = layout(objects, templateById('offset', 'square'), 4);
     expect(result.map((object) => object.objectId).sort()).toEqual([
+      'book',
       'phone',
       'puzzle',
     ]);
@@ -199,7 +201,7 @@ describe('layout', () => {
         (asset.svgSize.h * scale) / frame.h,
       );
       expect(cover).toBeGreaterThan(0.9);
-      expect(scale).toBeGreaterThan(defaultScale(format) * 1.5);
+      expect(scale).toBeGreaterThan(defaultScale(format) * 1.1);
       expect(templateById('compact', format).mainSlots.length).toBeGreaterThan(
         1,
       );

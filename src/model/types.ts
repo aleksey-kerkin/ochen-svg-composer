@@ -79,6 +79,11 @@ export interface Composition {
   objects: PlacedObject[];
   selectedUid?: string;
   seed: number;
+  /**
+   * When true, templates and name compose add 1–2 monochrome background
+   * objects. Absent means on. False keeps only main objects.
+   */
+  withBackgrounds?: boolean;
 }
 
 /** Slot position as a fraction of the frame. Values may fall outside 0..1. */
