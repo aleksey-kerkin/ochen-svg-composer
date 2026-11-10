@@ -256,6 +256,7 @@ describe('editor', () => {
         .sort(),
     ).toEqual(['book', 'phone', 'puzzle']);
     expect(objects.some((object) => object.role === 'background')).toBe(true);
+    expect(useComposition.getState().sceneTitle).toBe('книга, телефон и пазлы');
     expect(screen.getByText('Книга')).toBeTruthy();
     expect(screen.getByText('Телефон')).toBeTruthy();
     expect(screen.getByText('Пазлы')).toBeTruthy();
@@ -375,6 +376,23 @@ describe('editor', () => {
     expect(
       state.objects.find((object) => object.objectId === 'headphones')?.role,
     ).toBe('main');
+  });
+
+  it('«Скачать SVG» saves a file named from the format and date', () => {
+    const downloads: string[] = [];
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: () => 'blob:composition',
+      revokeObjectURL: () => undefined,
+    });
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloads.push(this.download);
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Скачать SVG' }));
+    expect(downloads[0]).toMatch(/^landscape-\d{4}-\d{2}-\d{2}\.svg$/);
   });
 
   it('library search «ваза» hides Книга but keeps Цветы', () => {

@@ -1,8 +1,11 @@
 import { useState, type ChangeEvent } from 'react';
+import { exportFileName, exportSvg } from '../core/exportSvg.ts';
 import { TEMPLATE_LABELS, templateIds } from '../core/layout.ts';
+import { resolvePalette } from '../core/recolor.ts';
 import manifest from '../library/manifest.json' with { type: 'json' };
 import type { FormatId, Manifest, Size } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
+import { saveSvgFile } from './download.ts';
 
 const { schemes } = manifest as Manifest;
 
@@ -50,8 +53,37 @@ export function Toolbar() {
     event.currentTarget.value = '';
   }
 
+  function downloadSvg() {
+    const state = useComposition.getState();
+    const palette = resolvePalette(state.paletteId, state.customPalettes);
+    const markup = exportSvg(
+      {
+        format: state.format,
+        size: state.size,
+        paletteId: state.paletteId,
+        scale: state.scale,
+        objects: state.objects,
+        seed: state.seed,
+        ...(state.templateId !== undefined
+          ? { templateId: state.templateId }
+          : {}),
+        ...(state.withBackgrounds !== undefined
+          ? { withBackgrounds: state.withBackgrounds }
+          : {}),
+      },
+      palette,
+    );
+    saveSvgFile(
+      markup,
+      exportFileName({ format: state.format, title: state.sceneTitle }),
+    );
+  }
+
   return (
     <header className="toolbar panel">
+      <button type="button" className="seg" onClick={downloadSvg}>
+        Скачать SVG
+      </button>
       <div className="toolbar__group" role="group" aria-label="Формат кадра">
         {FORMATS.map((entry) => (
           <button
