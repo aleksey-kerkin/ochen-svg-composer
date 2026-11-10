@@ -228,6 +228,28 @@ describe('composition reducer', () => {
     expect(next.paletteId).toBe('peach');
   });
 
+  it('cycles obj colors on a main object and keeps the shift on a copy', () => {
+    const state = place('book');
+    const uid = state.objects[0]?.uid ?? '';
+    const once = reduceComposition(state, { type: 'cycleColors', uid });
+    expect(byUid(once, uid).colorShift).toBe(1);
+    const twice = reduceComposition(once, { type: 'cycleColors', uid });
+    expect(byUid(twice, uid).colorShift).toBe(2);
+    const back = reduceComposition(twice, { type: 'cycleColors', uid });
+    expect(byUid(back, uid).colorShift ?? 0).toBe(0);
+    const copy = reduceComposition(twice, { type: 'duplicate', uid });
+    expect(byUid(copy, 'obj-2').colorShift).toBe(2);
+    const background = reduceComposition(state, {
+      type: 'toggleRole',
+      uid,
+    });
+    const skipped = reduceComposition(background, {
+      type: 'cycleColors',
+      uid,
+    });
+    expect(byUid(skipped, uid).colorShift).toBeUndefined();
+  });
+
   it('toggles main and background for any object', () => {
     const state = place('headphones');
     const uid = state.objects[0]?.uid ?? '';
@@ -263,6 +285,30 @@ describe('composition reducer', () => {
 describe('useComposition', () => {
   beforeEach(() => {
     useComposition.setState(useComposition.getInitialState(), true);
+  });
+
+  it('stores a loaded palette and rejects a short one', () => {
+    useComposition
+      .getState()
+      .addPalette(
+        [
+          '#112233',
+          '#223344',
+          '#334455',
+          '#181817',
+          '#aabbcc',
+          '#bbccdd',
+          '#ccddee',
+          '#ffffff',
+        ].join('\n'),
+      );
+    const loaded = useComposition.getState();
+    expect(loaded.customPalettes).toHaveLength(1);
+    expect(loaded.paletteId).toBe(loaded.customPalettes[0]?.id);
+    expect(loaded.paletteError).toBeUndefined();
+    useComposition.getState().addPalette('#112233');
+    expect(useComposition.getState().customPalettes).toHaveLength(1);
+    expect(useComposition.getState().paletteError).toMatch(/8/);
   });
 
   it('adds an object through the zustand store', () => {

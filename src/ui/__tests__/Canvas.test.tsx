@@ -109,6 +109,47 @@ describe('Canvas', () => {
     );
   });
 
+  it('repaints the scene into peach without leftover lilac colors', () => {
+    useComposition.getState().setPalette('peach');
+    useComposition.getState().add('book', 'main');
+    useComposition.getState().add('book', 'background');
+    const view = render(<Canvas />);
+    const html = view.container.innerHTML.toLowerCase();
+    for (const color of [
+      '#d7cdf5',
+      '#aa9bf0',
+      '#7864d7',
+      '#f9a3aa',
+      '#ffe3e1',
+    ]) {
+      expect(html).not.toContain(color);
+    }
+    expect(html).toContain('#fdd7b9');
+    expect(html).toContain('#80dada');
+    expect(html).toContain('#d27532');
+  });
+
+  it('recolors the lilac frame for a loaded palette', () => {
+    useComposition
+      .getState()
+      .addPalette(
+        [
+          '#112233',
+          '#223344',
+          '#334455',
+          '#181817',
+          '#aabbcc',
+          '#bbccdd',
+          '#ccddee',
+          '#ffffff',
+        ].join('\n'),
+      );
+    const view = render(<Canvas />);
+    const html = view.container.innerHTML.toLowerCase();
+    expect(html).toContain('#112233');
+    expect(html).not.toContain('#d7cdf5');
+  });
+
   it('swaps the background asset when the scheme changes', () => {
     useComposition.getState().setPalette('peach');
     const view = render(<Canvas />);

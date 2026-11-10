@@ -1,3 +1,4 @@
+import { useState, type ChangeEvent } from 'react';
 import manifest from '../library/manifest.json' with { type: 'json' };
 import type { FormatId, Manifest, Size } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
@@ -21,6 +22,24 @@ export function Toolbar() {
   const setSize = useComposition((state) => state.setSize);
   const setScale = useComposition((state) => state.setScale);
   const setPalette = useComposition((state) => state.setPalette);
+  const customPalettes = useComposition((state) => state.customPalettes);
+  const paletteError = useComposition((state) => state.paletteError);
+  const addPalette = useComposition((state) => state.addPalette);
+
+  const [paletteText, setPaletteText] = useState('');
+
+  function onPaletteFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setPaletteText(reader.result);
+      }
+    };
+    reader.readAsText(file);
+    event.currentTarget.value = '';
+  }
 
   return (
     <header className="toolbar panel">
@@ -74,6 +93,47 @@ export function Toolbar() {
             {scheme.name}
           </button>
         ))}
+        {customPalettes.map((palette) => (
+          <button
+            key={palette.id}
+            type="button"
+            className="seg"
+            aria-pressed={paletteId === palette.id}
+            onClick={() => setPalette(palette.id)}
+          >
+            {palette.name}
+          </button>
+        ))}
+      </div>
+      <div className="toolbar__palette-upload">
+        <label className="toolbar__palette-file">
+          <span className="toolbar__palette-file-label">JSON</span>
+          <input
+            type="file"
+            accept=".json,application/json"
+            onChange={onPaletteFileChange}
+          />
+        </label>
+        <textarea
+          className="toolbar__palette-text"
+          aria-label="Палитра"
+          placeholder="JSON { name, colors } или 8 hex через пробел: bg.base, bg.mid, bg.dark, ink, obj.1, obj.2, obj.3, paper"
+          value={paletteText}
+          onChange={(event) => setPaletteText(event.currentTarget.value)}
+          rows={2}
+        />
+        <button
+          type="button"
+          className="seg toolbar__palette-submit"
+          onClick={() => addPalette(paletteText)}
+        >
+          Загрузить
+        </button>
+        {paletteError ? (
+          <p className="toolbar__palette-error" role="alert">
+            {paletteError}
+          </p>
+        ) : null}
       </div>
     </header>
   );

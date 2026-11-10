@@ -21,6 +21,7 @@ export function Inspector() {
   const bringForward = useComposition((state) => state.bringForward);
   const sendBackward = useComposition((state) => state.sendBackward);
   const toggleRole = useComposition((state) => state.toggleRole);
+  const cycleColors = useComposition((state) => state.cycleColors);
 
   const selected = objects.find((object) => object.uid === selectedUid);
 
@@ -77,6 +78,11 @@ export function Inspector() {
             <button type="button" onClick={() => toggleRole(selected.uid)}>
               {selected.role === 'main' ? 'Сделать фоновым' : 'Сделать главным'}
             </button>
+            {selected.role === 'main' ? (
+              <button type="button" onClick={() => cycleColors(selected.uid)}>
+                Другие цвета
+              </button>
+            ) : null}
           </div>
         </div>
       )}

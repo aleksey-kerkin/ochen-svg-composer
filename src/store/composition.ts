@@ -24,6 +24,7 @@ export type CompositionAction =
   | { type: 'setScale'; scale: number }
   | { type: 'setPalette'; paletteId: string }
   | { type: 'toggleRole'; uid: string }
+  | { type: 'cycleColors'; uid: string }
   | { type: 'reseed' };
 
 const knownObjectIds = new Set(
@@ -97,6 +98,17 @@ export function reduceComposition(
         ...object,
         role: object.role === 'main' ? 'background' : 'main',
       }));
+    case 'cycleColors':
+      return updateObject(state, action.uid, (object) => {
+        if (object.role !== 'main') return object;
+        const next = (((object.colorShift ?? 0) + 1) % 3) as 0 | 1 | 2;
+        if (next === 0) {
+          const rest = { ...object };
+          delete rest.colorShift;
+          return rest;
+        }
+        return { ...object, colorShift: next };
+      });
     case 'reseed':
       return { ...state, seed: state.seed + 1 };
     default: {
@@ -135,12 +147,10 @@ function duplicateObject(state: Composition, uid: string): Composition {
   const z = source.z + 1;
   // Spec offset is 24px. Shift both axes so the copy does not sit on the source.
   const copy: PlacedObject = {
+    ...source,
     uid: nextUid(state.objects),
-    objectId: source.objectId,
-    role: source.role,
     x: source.x + 24,
     y: source.y + 24,
-    rotation: source.rotation,
     z,
   };
   const objects = state.objects.map((object) =>
