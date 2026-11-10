@@ -3,27 +3,15 @@ import {
   useRef,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import {
-  getAsset,
-  getBackgroundAsset,
-  scopeAsset,
-} from '../library/registry.ts';
+import { getAsset, scopeAsset } from '../library/registry.ts';
+import { frameMarkup, recolorAsset, resolvePalette } from '../core/recolor.ts';
 import { FORMATS, coverPlacement, coverTransform } from '../model/formats.ts';
 import { renderScale } from '../model/scale.ts';
-import type { PlacedObject, Size } from '../model/types.ts';
+import type { Palette, PlacedObject, Size } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
 import { applyInverse } from './svgPoint.ts';
 import { objectTransform } from './transforms.ts';
 import './canvas.css';
-
-type SchemeId = 'lilac' | 'peach' | 'teal';
-
-function schemeIdOf(paletteId: string): SchemeId {
-  if (paletteId === 'peach' || paletteId === 'teal' || paletteId === 'lilac') {
-    return paletteId;
-  }
-  return 'lilac';
-}
 
 export function Canvas() {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -31,13 +19,15 @@ export function Canvas() {
   const format = useComposition((state) => state.format);
   const size = useComposition((state) => state.size);
   const paletteId = useComposition((state) => state.paletteId);
+  const customPalettes = useComposition((state) => state.customPalettes);
   const scale = useComposition((state) => renderScale(state.scale, state.size));
   const objects = useComposition((state) => state.objects);
   const selectedUid = useComposition((state) => state.selectedUid);
   const select = useComposition((state) => state.select);
   const move = useComposition((state) => state.move);
   const frame = FORMATS[format];
-  const background = getBackgroundAsset(schemeIdOf(paletteId), size);
+  const palette = resolvePalette(paletteId, customPalettes);
+  const background = frameMarkup(palette, size);
   const cover = coverPlacement(frame.w, frame.h, background.svgSize.w);
   const ordered = [...objects].sort((left, right) => left.z - right.z);
 
@@ -115,6 +105,7 @@ export function Canvas() {
               object={object}
               size={size}
               scale={scale}
+              palette={palette}
               selected={object.uid === selectedUid}
               onPointerDown={onObjectPointerDown}
             />
@@ -129,12 +120,14 @@ function SceneObject({
   object,
   size,
   scale,
+  palette,
   selected,
   onPointerDown,
 }: {
   object: PlacedObject;
   size: Size;
   scale: number;
+  palette: Palette;
   selected: boolean;
   onPointerDown: (event: ReactPointerEvent<SVGGElement>, uid: string) => void;
 }) {
@@ -142,6 +135,12 @@ function SceneObject({
     getAsset(object.objectId, size, object.role),
     object.uid,
   );
+  const painted = recolorAsset(
+    asset.inner,
+    palette,
+    object.role,
+    object.role === 'main' ? (object.colorShift ?? 0) : 0,
+  ).markup;
   const contentRef = useRef<SVGGElement>(null);
   const frameRef = useRef<SVGRectElement>(null);
 
@@ -160,7 +159,7 @@ function SceneObject({
     } catch {
       frame.setAttribute('visibility', 'hidden');
     }
-  }, [asset.inner, selected]);
+  }, [painted, selected]);
 
   return (
     <g
@@ -170,7 +169,7 @@ function SceneObject({
       transform={objectTransform(object, scale, asset.svgSize)}
       onPointerDown={(event) => onPointerDown(event, object.uid)}
     >
-      <g ref={contentRef} dangerouslySetInnerHTML={{ __html: asset.inner }} />
+      <g ref={contentRef} dangerouslySetInnerHTML={{ __html: painted }} />
       {selected ? (
         <rect
           ref={frameRef}

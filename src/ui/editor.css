@@ -77,6 +77,61 @@
   width: 8rem;
 }
 
+.toolbar__palette-upload {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: flex-start;
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.toolbar__palette-file {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+.toolbar__palette-file input[type='file'] {
+  max-width: 9rem;
+  font-size: 0.75rem;
+}
+
+.toolbar__palette-text {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: #181817;
+  background: #fff;
+  border: 1px solid rgb(24 24 23 / 0.15);
+  border-radius: 0.35rem;
+  resize: vertical;
+}
+
+.toolbar__palette-submit {
+  flex: 0 0 auto;
+}
+
+.toolbar__palette-error {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.75rem;
+  color: #8b1e1e;
+}
+
+@media (max-width: 390px) {
+  .toolbar__palette-upload {
+    flex-basis: 100%;
+  }
+}
+
 .seg {
   margin: 0;
   padding: 0.35rem 0.65rem;

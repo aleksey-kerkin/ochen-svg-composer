@@ -65,6 +65,8 @@ export interface PlacedObject {
   y: number;
   rotation: number;
   z: number;
+  /** Cycles obj.1–obj.3 on a main object. Ink and paper stay put. */
+  colorShift?: 0 | 1 | 2;
 }
 
 export interface Composition {

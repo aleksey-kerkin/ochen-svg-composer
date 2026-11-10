@@ -145,4 +145,57 @@ describe('editor', () => {
     expect(useComposition.getState().objects).toHaveLength(1);
     expect(useComposition.getState().selectedUid).toBe('obj-1');
   });
+
+  it('loads eight hex colors and selects «Своя палитра»', () => {
+    render(<App />);
+    const paletteInput = screen.getByRole('textbox', { name: 'Палитра' });
+    fireEvent.change(paletteInput, {
+      target: {
+        value: [
+          '#112233',
+          '#223344',
+          '#334455',
+          '#181817',
+          '#aabbcc',
+          '#bbccdd',
+          '#ccddee',
+          '#ffffff',
+        ].join('\n'),
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Загрузить' }));
+    const custom = screen.getByRole('button', { name: 'Своя палитра' });
+    expect(custom).toBeTruthy();
+    expect(custom.getAttribute('aria-pressed')).toBe('true');
+    const state = useComposition.getState();
+    expect(state.customPalettes).toHaveLength(1);
+    expect(state.paletteId).toBe(state.customPalettes[0]?.id);
+  });
+
+  it('shows an alert when palette text has only one hex', () => {
+    render(<App />);
+    const paletteInput = screen.getByRole('textbox', { name: 'Палитра' });
+    fireEvent.change(paletteInput, { target: { value: '#112233' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Загрузить' }));
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Своя палитра' })).toBeNull();
+    expect(useComposition.getState().customPalettes).toHaveLength(0);
+  });
+
+  it('cycles colorShift on «Другие цвета» for a main object', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Другие цвета' }));
+    expect(useComposition.getState().objects[0]?.colorShift).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Другие цвета' }));
+    expect(useComposition.getState().objects[0]?.colorShift).toBe(2);
+  });
+
+  it('hides «Другие цвета» after making the object background', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    expect(screen.getByRole('button', { name: 'Другие цвета' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Сделать фоновым' }));
+    expect(screen.queryByRole('button', { name: 'Другие цвета' })).toBeNull();
+  });
 });
