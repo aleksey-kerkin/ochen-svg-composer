@@ -17,6 +17,7 @@ type CompositionStore = Composition & {
   select: (uid?: string) => void;
   setFormat: (format: FormatId) => void;
   setSize: (size: Size) => void;
+  setScale: (scale: number) => void;
   setPalette: (paletteId: string) => void;
   toggleRole: (uid: string) => void;
   reseed: () => void;
@@ -63,6 +64,8 @@ export const useComposition = create<CompositionStore>((set) => ({
   setFormat: (format) =>
     set((state) => apply(state, { type: 'setFormat', format })),
   setSize: (size) => set((state) => apply(state, { type: 'setSize', size })),
+  setScale: (scale) =>
+    set((state) => apply(state, { type: 'setScale', scale })),
   setPalette: (paletteId) =>
     set((state) => apply(state, { type: 'setPalette', paletteId })),
   toggleRole: (uid) =>

@@ -1,5 +1,6 @@
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../model/formats.ts';
+import { defaultScale, shortSide } from '../model/scale.ts';
 import type {
   Composition,
   FormatId,
@@ -20,6 +21,7 @@ export type CompositionAction =
   | { type: 'select'; uid?: string }
   | { type: 'setFormat'; format: FormatId }
   | { type: 'setSize'; size: Size }
+  | { type: 'setScale'; scale: number }
   | { type: 'setPalette'; paletteId: string }
   | { type: 'toggleRole'; uid: string }
   | { type: 'reseed' };
@@ -33,7 +35,7 @@ export function initialComposition(): Composition {
     format: 'landscape',
     size: 'L',
     paletteId: 'lilac',
-    scale: 1,
+    scale: defaultScale('landscape'),
     objects: [],
     seed: 1,
   };
@@ -68,10 +70,20 @@ export function reduceComposition(
       return stepZ(state, action.uid, -1);
     case 'select':
       return selectObject(state, action.uid);
-    case 'setFormat':
-      return state.format === action.format
-        ? state
-        : { ...state, format: action.format };
+    case 'setFormat': {
+      if (state.format === action.format) return state;
+      const ratio = shortSide(action.format) / shortSide(state.format);
+      return {
+        ...state,
+        format: action.format,
+        scale: state.scale * ratio,
+      };
+    }
+    case 'setScale':
+      if (!Number.isFinite(action.scale) || action.scale <= 0) {
+        throw new Error('scale must be a positive number');
+      }
+      return { ...state, scale: action.scale };
     case 'setSize':
       return state.size === action.size
         ? state
