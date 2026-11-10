@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import manifest from '../../library/manifest.json' with { type: 'json' };
 import tags from '../../library/tags.json' with { type: 'json' };
 import type { LibraryItem, Manifest } from '../../model/types.ts';
-import { libraryItemMatches, matchByNames } from '../match.ts';
+import { libraryItemMatches, matchByKeywords, matchByNames } from '../match.ts';
 
 const library = manifest as Manifest;
 const items = library.items;
@@ -90,6 +90,41 @@ describe('matchByNames', () => {
     const parsed = matchByNames('кот', items);
     expect(parsed.matches).toEqual([]);
     expect(parsed.unknown).toEqual(['кот']);
+  });
+
+  it('leaves a theme word for the metaphor picker', () => {
+    const parsed = matchByNames('учёба', items);
+    expect(parsed.matches).toEqual([]);
+    expect(parsed.unknown).toEqual(['учёба']);
+  });
+});
+
+describe('matchByKeywords', () => {
+  it('reads «учёба» as book and pen, and «Учёба онлайн» adds the phone', () => {
+    expect(matchByKeywords('учёба', items).main).toEqual(['book', 'pen']);
+    expect(matchByKeywords('Учёба онлайн', items).main).toEqual([
+      'book',
+      'pen',
+      'phone',
+    ]);
+  });
+
+  it('reads «время - деньги» as coin and wallet and «уютный вечер» as lamp and flowers', () => {
+    expect(matchByKeywords('время - деньги', items).main).toEqual([
+      'coin',
+      'wallet',
+    ]);
+    expect(matchByKeywords('время - деньги', items).background).toEqual([]);
+    expect(matchByKeywords('уютный вечер', items).main).toEqual([
+      'lamp',
+      'flowers',
+    ]);
+  });
+
+  it('falls back to book and phone when nothing matches', () => {
+    const picked = matchByKeywords('хрюндель', items);
+    expect(picked.main).toEqual(['book', 'phone']);
+    expect(picked.reason).toMatch(/ничего не нашлось/i);
   });
 });
 

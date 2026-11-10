@@ -2,18 +2,15 @@ import { FORMATS } from '../model/formats.ts';
 import type { LayoutTemplate, PlacedObject } from '../model/types.ts';
 import {
   type Box,
-  RIDERS,
-  SUPPORTS,
   axisBox,
   contains,
   crossesFrame,
-  faceLift,
   intersection,
   renderedSize,
-  topFace,
 } from './geometry.ts';
+import { canRest, faceOf, footprintOf, profile } from './profiles.ts';
 
-const GAP = 12;
+const GAP = 14;
 
 function clone(object: PlacedObject): PlacedObject {
   const next: PlacedObject = {
@@ -45,249 +42,358 @@ function visibleFraction(box: Box, frame: { w: number; h: number }): number {
   return (hit.w * hit.h) / (box.w * box.h);
 }
 
-function safeFloor(template: LayoutTemplate, frame: { h: number }): number {
-  const safe = template.safeArea;
-  if (!safe) return 0;
-  return (safe.y + safe.h) * frame.h;
+function unionBox(boxes: Box[]): Box {
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const right = Math.max(...boxes.map((box) => box.x + box.w));
+  const bottom = Math.max(...boxes.map((box) => box.y + box.h));
+  return { x: left, y: top, w: right - left, h: bottom - top };
 }
 
-function search(
-  object: PlacedObject,
-  placed: Box[],
+/** Inner rect the main group must occupy. Under-title keeps a title band. */
+export function contentBox(
   template: LayoutTemplate,
   frame: { w: number; h: number },
-  prefer: 'high' | 'low',
-): { x: number; y: number } {
-  const scale = template.scale;
-  const size = renderedSize(object, scale);
-  const floor = safeFloor(template, frame);
-  let best: { x: number; y: number; score: number } | null = null;
-  for (let pass = 0; pass < 2; pass += 1) {
-    const minVisible = pass === 0 ? 0.42 : 0.22;
-    for (let iy = 0; iy <= 32; iy += 1) {
-      for (let ix = 0; ix <= 38; ix += 1) {
-        const fx = -0.22 + ix * 0.04;
-        const fy = -0.08 + iy * 0.04;
-        const x = fx * frame.w;
-        const y = fy * frame.h;
-        if (y <= floor) continue;
-        const box = {
-          x: x - size.w / 2,
-          y: y - size.h / 2,
-          w: size.w,
-          h: size.h,
-        };
-        if (overlaps(box, placed, GAP)) continue;
-        const visible = visibleFraction(box, frame);
-        if (visible < minVisible) continue;
-        const priorX = prefer === 'high' ? 0.36 : 0.66;
-        const priorY = prefer === 'high' ? 0.36 : 0.72;
-        const dist = Math.abs(fx - priorX) + Math.abs(fy - priorY);
-        const score = visible * 4 - dist;
-        if (!best || score > best.score) best = { x, y, score };
-      }
-    }
-    if (best) return best;
+): Box {
+  const insetX = 0.04;
+  const bottom = 0.04;
+  if (template.safeArea) {
+    const top = 0.32;
+    return {
+      x: frame.w * insetX,
+      y: frame.h * top,
+      w: frame.w * (1 - insetX * 2),
+      h: frame.h * (1 - top - bottom),
+    };
   }
-  const right = placed.reduce((max, box) => Math.max(max, box.x + box.w), 0);
+  if (template.id === 'offset') {
+    return {
+      x: frame.w * 0.03,
+      y: frame.h * 0.05,
+      w: frame.w * 0.82,
+      h: frame.h * 0.9,
+    };
+  }
   return {
-    x: right + GAP + size.w / 2,
-    y: Math.max(floor + size.h / 2 + 8, frame.h * 0.72),
+    x: frame.w * insetX,
+    y: frame.h * 0.05,
+    w: frame.w * (1 - insetX * 2),
+    h: frame.h * 0.9,
   };
 }
 
-function placeSupport(
-  object: PlacedObject,
-  template: LayoutTemplate,
-  frame: { w: number; h: number },
-  random: () => number,
-): void {
-  const size = renderedSize(object, template.scale);
-  // Landscape books are wider than the short side, so the support sits
-  // left of center and a rider that does not fit on the pages can show
-  // beside it instead of leaving the frame.
-  const faceX =
-    frame.w *
-    (template.format === 'landscape'
-      ? 0.3
-      : template.id === 'offset'
-        ? 0.34
-        : 0.42);
-  const faceY =
-    frame.h *
-    (template.safeArea ? 0.64 : template.format === 'portrait' ? 0.38 : 0.5);
-  const jx = (random() * 2 - 1) * frame.w * 0.012;
-  const jy = (random() * 2 - 1) * frame.h * 0.012;
-  object.x = faceX + jx;
-  object.y = faceY + faceLift(size.h) + jy;
-  object.rotation = 0;
-  const floor = safeFloor(template, frame);
-  const minY = floor + faceLift(size.h) + 8;
-  if (object.y < minY) object.y = minY;
+function areaOf(object: PlacedObject, scale: number): number {
+  const size = renderedSize(object, scale);
+  return size.w * size.h;
 }
 
-function stackOn(
+interface Seat {
+  rider: PlacedObject;
+  support: PlacedObject;
+  ox: number;
+  oy: number;
+}
+
+function findSpot(
+  size: { w: number; h: number },
+  face: { w: number; h: number },
+  reserved: Box[],
+): { cx: number; cy: number; box: Box } | null {
+  if (size.w > face.w + 0.5 || size.h > face.h + 0.5) return null;
+  const y = (face.h - size.h) / 2;
+  if (reserved.length === 0) {
+    const box = { x: (face.w - size.w) / 2, y, w: size.w, h: size.h };
+    return { cx: face.w / 2, cy: face.h / 2, box };
+  }
+  for (let x = 0; x <= face.w - size.w + 0.5; x += 6) {
+    const box = { x, y, w: size.w, h: size.h };
+    if (reserved.some((other) => intersection(box, other) !== null)) continue;
+    return { cx: box.x + size.w / 2, cy: box.y + size.h / 2, box };
+  }
+  return null;
+}
+
+function faceSize(
   object: PlacedObject,
-  supports: PlacedObject[],
-  riderBoxes: Box[],
+  scale: number,
+): { w: number; h: number } {
+  const size = renderedSize(object, scale);
+  const face = profile(object.objectId).face;
+  return { w: size.w * face.w, h: size.h * face.h };
+}
+
+function placeRow(
+  items: PlacedObject[],
   template: LayoutTemplate,
   frame: { w: number; h: number },
-  random: () => number,
-): boolean {
-  const scale = template.scale;
-  const size = renderedSize(object, scale);
-  const floor = safeFloor(template, frame);
-  const jx = (random() * 2 - 1) * Math.min(18, frame.w * 0.012);
-  const jy = (random() * 2 - 1) * Math.min(12, frame.h * 0.012);
-  for (const support of supports) {
-    const face = topFace(axisBox(support, scale));
-    if (size.w > face.w || size.h > face.h) continue;
-    const cx = face.x + face.w / 2;
-    const cy = face.y + face.h / 2;
-    const spots = [
-      { x: cx + jx, y: cy + jy },
-      { x: cx, y: cy },
-      { x: face.x + size.w / 2 + 6, y: cy },
-      { x: face.x + face.w - size.w / 2 - 6, y: cy },
-    ];
-    for (const spot of spots) {
-      if (spot.y <= floor) continue;
-      const box = {
-        x: spot.x - size.w / 2,
-        y: spot.y - size.h / 2,
-        w: size.w,
-        h: size.h,
-      };
-      if (!contains(face, box)) continue;
-      if (overlaps(box, riderBoxes, 8)) continue;
-      object.x = spot.x;
-      object.y = spot.y;
+  scale: number,
+): void {
+  if (items.length === 0) return;
+  const content = contentBox(template, frame);
+  const gap = Math.max(GAP, frame.w * 0.012);
+  const ordered = [...items].sort(
+    (left, right) => areaOf(right, scale) - areaOf(left, scale),
+  );
+  const frontCount =
+    ordered.length > 3 ? Math.ceil(ordered.length / 2) : ordered.length;
+  const front = ordered.slice(0, frontCount);
+  const back = ordered.slice(frontCount);
+  const baseline = content.y + content.h;
+
+  const placeLine = (line: PlacedObject[], bottom: number) => {
+    const widths = line.map((object) => renderedSize(object, scale).w);
+    const total =
+      widths.reduce((sum, width) => sum + width, 0) +
+      gap * Math.max(0, line.length - 1);
+    let x = content.x + Math.max(0, content.w - total) / 2;
+    if (template.id === 'offset') {
+      x = content.x + Math.max(0, content.w - total) * 0.18;
+    }
+    for (let index = 0; index < line.length; index += 1) {
+      const object = line[index];
+      const size = renderedSize(object!, scale);
+      if (!object) continue;
+      object.x = x + size.w / 2;
+      object.y = bottom - size.h / 2;
       object.rotation = 0;
-      return true;
+      x += size.w + gap;
+    }
+  };
+
+  placeLine(front, baseline);
+  if (back.length > 0) {
+    const frontH = Math.max(
+      ...front.map((object) => renderedSize(object, scale).h),
+    );
+    placeLine(back, baseline - frontH - gap);
+  }
+}
+
+function translate(objects: PlacedObject[], dx: number, dy: number): void {
+  for (const object of objects) {
+    object.x += dx;
+    object.y += dy;
+  }
+}
+
+function clampGroup(
+  objects: PlacedObject[],
+  template: LayoutTemplate,
+  frame: { w: number; h: number },
+  scale: number,
+): void {
+  if (objects.length === 0) return;
+  const content = contentBox(template, frame);
+  const boxes = objects.map((object) => axisBox(object, scale));
+  const union = unionBox(boxes);
+  let dx = 0;
+  let dy = 0;
+  if (union.w <= content.w + 0.5) {
+    if (union.x < content.x) dx = content.x - union.x;
+    else if (union.x + union.w > content.x + content.w) {
+      dx = content.x + content.w - (union.x + union.w);
     }
   }
-  return false;
+  if (union.h <= content.h + 0.5) {
+    if (union.y < content.y) dy = content.y - union.y;
+    else if (union.y + union.h > content.y + content.h) {
+      dy = content.y + content.h - (union.y + union.h);
+    }
+  }
+  translate(objects, dx, dy);
+}
+
+function arrangeAt(
+  mains: PlacedObject[],
+  template: LayoutTemplate,
+  random: () => number,
+  scale: number,
+): PlacedObject[] {
+  const frame = FORMATS[template.format];
+  const copies = mains.map(clone);
+  const supports = copies.filter(
+    (object) => profile(object.objectId).partners.length > 0,
+  );
+  const riders = copies
+    .filter((object) => profile(object.objectId).anchor === 'top')
+    .sort((left, right) => areaOf(right, scale) - areaOf(left, scale));
+  const stands = copies.filter(
+    (object) => profile(object.objectId).anchor === 'side',
+  );
+  const reserved = new Map<string, Box[]>();
+  const seats: Seat[] = [];
+  const unseated: PlacedObject[] = [];
+
+  for (const rider of riders) {
+    const size = renderedSize(rider, scale);
+    const options = supports
+      .filter((support) => canRest(rider.objectId, support.objectId))
+      .sort(
+        (left, right) =>
+          faceSize(right, scale).w * faceSize(right, scale).h -
+          faceSize(left, scale).w * faceSize(left, scale).h,
+      );
+    let seated = false;
+    for (const support of options) {
+      const face = faceSize(support, scale);
+      const spot = findSpot(size, face, reserved.get(support.uid) ?? []);
+      if (!spot) continue;
+      const taken = reserved.get(support.uid) ?? [];
+      taken.push(spot.box);
+      reserved.set(support.uid, taken);
+      seats.push({ rider, support, ox: spot.cx, oy: spot.cy });
+      seated = true;
+      break;
+    }
+    if (!seated) unseated.push(rider);
+  }
+
+  const grounded = [...supports, ...stands, ...unseated];
+  placeRow(grounded, template, frame, scale);
+  for (const seat of seats) {
+    const face = faceOf(seat.support.objectId, axisBox(seat.support, scale));
+    seat.rider.x = face.x + seat.ox;
+    seat.rider.y = face.y + seat.oy;
+    seat.rider.rotation = 0;
+  }
+
+  const jx = (random() * 2 - 1) * frame.w * 0.01;
+  const jy = (random() * 2 - 1) * frame.h * 0.01;
+  translate(copies, jx, jy);
+  clampGroup(copies, template, frame, scale);
+  return copies;
+}
+
+function roomForBackdrop(
+  boxes: Box[],
+  frame: { w: number; h: number },
+): boolean {
+  if (boxes.length === 0) return true;
+  const union = unionBox(boxes);
+  const left = union.x;
+  const right = frame.w - (union.x + union.w);
+  const top = union.y;
+  const bottom = frame.h - (union.y + union.h);
+  return (
+    Math.max(left, right) > frame.w * 0.07 ||
+    Math.max(top, bottom) > frame.h * 0.07
+  );
+}
+
+function placementFits(
+  mains: PlacedObject[],
+  template: LayoutTemplate,
+  scale: number,
+  reserveBackdrop: boolean,
+): boolean {
+  const frame = FORMATS[template.format];
+  const placed = arrangeAt(mains, template, () => 0.5, scale);
+  const content = contentBox(template, frame);
+  const boxes = placed.map((object) => axisBox(object, scale));
+  for (const box of boxes) {
+    if (!contains(content, box)) return false;
+  }
+  for (let left = 0; left < placed.length; left += 1) {
+    for (let right = left + 1; right < placed.length; right += 1) {
+      const a = placed[left];
+      const b = placed[right];
+      if (!a || !b) continue;
+      const hit = intersection(
+        footprintOf(a.objectId, axisBox(a, scale)),
+        footprintOf(b.objectId, axisBox(b, scale)),
+      );
+      if (!hit) continue;
+      const rider = canRest(a.objectId, b.objectId)
+        ? a
+        : canRest(b.objectId, a.objectId)
+          ? b
+          : undefined;
+      const support = rider === a ? b : rider === b ? a : undefined;
+      if (
+        !rider ||
+        !support ||
+        !contains(
+          faceOf(support.objectId, axisBox(support, scale)),
+          axisBox(rider, scale),
+        )
+      ) {
+        return false;
+      }
+    }
+  }
+  if (template.safeArea) {
+    const floor = (template.safeArea.y + template.safeArea.h) * frame.h;
+    if (placed.some((object) => object.y < floor)) return false;
+  }
+  if (reserveBackdrop && !roomForBackdrop(boxes, frame)) return false;
+  return true;
+}
+
+/** Largest scale at or below the template scale that keeps the group inside. */
+export function fitScale(
+  mains: PlacedObject[],
+  template: LayoutTemplate,
+  reserveBackdrop: boolean,
+): number {
+  if (mains.length <= 1) return template.scale;
+  if (placementFits(mains, template, template.scale, reserveBackdrop)) {
+    return template.scale;
+  }
+  let low = 0.14;
+  let high = template.scale;
+  if (!placementFits(mains, template, low, reserveBackdrop)) return low;
+  for (let step = 0; step < 18; step += 1) {
+    const mid = (low + high) / 2;
+    if (placementFits(mains, template, mid, reserveBackdrop)) low = mid;
+    else high = mid;
+  }
+  return low;
 }
 
 /**
- * Places two or more main objects so a rider lies fully on a support's top
- * face or beside it, and everything else keeps a gap between boxes.
+ * Places two or more main objects. A top item lies fully on a support's
+ * face or stands beside the group. Everyone else shares one ground line.
  */
 export function arrangeMains(
   mains: PlacedObject[],
   template: LayoutTemplate,
   random: () => number,
 ): PlacedObject[] {
-  const frame = FORMATS[template.format];
-  const scale = template.scale;
-  const copies = mains.map(clone);
-  const supports = copies.filter((object) => SUPPORTS.has(object.objectId));
-  const riders = copies
-    .filter((object) => RIDERS.has(object.objectId))
-    .sort(
-      (left, right) =>
-        renderedSize(right, scale).w * renderedSize(right, scale).h -
-        renderedSize(left, scale).w * renderedSize(left, scale).h,
-    );
-  const others = copies
-    .filter(
-      (object) =>
-        !SUPPORTS.has(object.objectId) && !RIDERS.has(object.objectId),
-    )
-    .sort(
-      (left, right) =>
-        renderedSize(right, scale).w * renderedSize(right, scale).h -
-        renderedSize(left, scale).w * renderedSize(left, scale).h,
-    );
-
-  const occupied: Box[] = [];
-  supports.forEach((object, index) => {
-    if (index === 0) placeSupport(object, template, frame, random);
-    else {
-      const spot = search(object, occupied, template, frame, 'low');
-      object.x = spot.x;
-      object.y = spot.y;
-      object.rotation = 0;
-    }
-    let box = axisBox(object, scale);
-    if (overlaps(box, occupied, GAP)) {
-      const spot = search(object, occupied, template, frame, 'low');
-      object.x = spot.x;
-      object.y = spot.y;
-    }
-    box = axisBox(object, scale);
-    occupied.push(box);
-  });
-
-  others.forEach((object, index) => {
-    const spot = search(
-      object,
-      occupied,
-      template,
-      frame,
-      index === 0 ? 'high' : 'low',
-    );
-    object.x = spot.x;
-    object.y = spot.y;
-    object.rotation = 0;
-    occupied.push(axisBox(object, scale));
-  });
-
-  const riderBoxes: Box[] = [];
-  for (const object of riders) {
-    const stacked = stackOn(
-      object,
-      supports,
-      riderBoxes,
-      template,
-      frame,
-      random,
-    );
-    if (!stacked) {
-      const spot = search(
-        object,
-        [...occupied, ...riderBoxes],
-        template,
-        frame,
-        'low',
-      );
-      object.x = spot.x;
-      object.y = spot.y;
-      object.rotation = 0;
-    }
-    riderBoxes.push(axisBox(object, scale));
-  }
-
-  return copies;
+  return arrangeAt(mains, template, random, template.scale);
 }
 
-function pointIn(x: number, y: number, box: Box): boolean {
-  return x >= box.x && y >= box.y && x <= box.x + box.w && y <= box.y + box.h;
-}
+type Side = 'left' | 'right' | 'top' | 'bottom';
 
-/** Share of the box that is inside the frame and not covered by a main. */
-function openFraction(
-  box: Box,
+function spotFor(
+  side: Side,
+  size: { w: number; h: number },
   mains: Box[],
   frame: { w: number; h: number },
-): number {
-  const steps = 7;
-  let open = 0;
-  for (let iy = 0; iy < steps; iy += 1) {
-    for (let ix = 0; ix < steps; ix += 1) {
-      const x = box.x + (box.w * (ix + 0.5)) / steps;
-      const y = box.y + (box.h * (iy + 0.5)) / steps;
-      if (x < 0 || y < 0 || x > frame.w || y > frame.h) continue;
-      if (mains.some((main) => pointIn(x, y, main))) continue;
-      open += 1;
-    }
+  band: number,
+): { x: number; y: number } | null {
+  const union = unionBox(mains);
+  const gap = 8;
+  if (side === 'left' || side === 'right') {
+    const limit =
+      side === 'left' ? union.x - gap : frame.w - (union.x + union.w) - gap;
+    if (limit < 12) return null;
+    const edge = Math.min(limit, Math.max(size.w * 0.38, 28));
+    const y = frame.h * band;
+    const x = side === 'left' ? edge - size.w / 2 : frame.w - edge + size.w / 2;
+    return { x, y };
   }
-  return open / (steps * steps);
+  const limit =
+    side === 'top' ? union.y - gap : frame.h - (union.y + union.h) - gap;
+  if (limit < 12) return null;
+  const edge = Math.min(limit, Math.max(size.h * 0.38, 28));
+  const x = frame.w * band;
+  const y = side === 'top' ? edge - size.h / 2 : frame.h - edge + size.h / 2;
+  return { x, y };
 }
 
 /**
- * Parks monochrome objects on the frame edge, behind the mains, with enough
- * of each one left uncovered to read.
+ * Parks monochrome objects on the frame edge, behind the mains, cropped by
+ * the frame and clear of every main box.
  */
 export function placeEdgeBackgrounds(
   backgrounds: PlacedObject[],
@@ -297,57 +403,90 @@ export function placeEdgeBackgrounds(
 ): PlacedObject[] {
   const frame = FORMATS[template.format];
   const scale = template.scale;
-  const mainBoxes = mains.map((object) => axisBox(object, scale));
+  const mainBoxes =
+    mains.length > 0
+      ? mains.map((object) => axisBox(object, scale))
+      : [
+          {
+            x: frame.w * 0.3,
+            y: frame.h * 0.3,
+            w: frame.w * 0.4,
+            h: frame.h * 0.4,
+          },
+        ];
   const copies = backgrounds.map(clone);
   const ordered = [...copies].sort(
-    (left, right) =>
-      renderedSize(right, scale).w * renderedSize(right, scale).h -
-      renderedSize(left, scale).w * renderedSize(left, scale).h,
+    (left, right) => areaOf(right, scale) - areaOf(left, scale),
   );
   const occupied: Box[] = [];
-  for (const object of ordered) {
+  const sides: Side[] = ['left', 'right', 'top', 'bottom'];
+  ordered.forEach((object, index) => {
     const size = renderedSize(object, scale);
-    let best: { x: number; y: number; score: number } | null = null;
-    for (let iy = 0; iy <= 16; iy += 1) {
-      for (let ix = 0; ix <= 16; ix += 1) {
-        const fx = -0.2 + ix * 0.0875;
-        const fy = -0.2 + iy * 0.0875;
-        const onEdge = fx < 0.28 || fx > 0.72 || fy < 0.28 || fy > 0.72;
-        if (!onEdge) continue;
-        const x = fx * frame.w;
-        const y = fy * frame.h;
-        const box = {
-          x: x - size.w / 2,
-          y: y - size.h / 2,
-          w: size.w,
-          h: size.h,
-        };
-        if (!crossesFrame(box, frame)) continue;
-        if (overlaps(box, occupied, 4)) continue;
-        const open = openFraction(box, mainBoxes, frame);
-        if (open < 0.14) continue;
-        const score = open - Math.abs(open - 0.36);
-        if (!best || score > best.score) best = { x, y, score };
-      }
+    const bands = [0.35, 0.62, 0.5];
+    let chosen: { x: number; y: number } | null = null;
+    for (let pass = 0; pass < 8 && !chosen; pass += 1) {
+      const side = sides[(index + pass) % sides.length] ?? 'left';
+      const band = bands[pass % bands.length] ?? 0.5;
+      const spot = spotFor(side, size, mainBoxes, frame, band);
+      if (!spot) continue;
+      const box = {
+        x: spot.x - size.w / 2,
+        y: spot.y - size.h / 2,
+        w: size.w,
+        h: size.h,
+      };
+      if (!crossesFrame(box, frame)) continue;
+      if (overlaps(box, mainBoxes, 4)) continue;
+      if (overlaps(box, occupied, 4)) continue;
+      const visible = visibleFraction(box, frame);
+      if (visible < 0.08 || visible > 0.62) continue;
+      chosen = spot;
     }
-    const jx = (random() * 2 - 1) * frame.w * 0.008;
-    const jy = (random() * 2 - 1) * frame.h * 0.008;
-    if (best) {
-      object.x = best.x + jx;
-      object.y = best.y + jy;
-    } else {
-      object.x = -0.04 * frame.w + jx;
-      object.y = 0.22 * frame.h + jy;
+    if (!chosen) {
+      const spot = spotFor('left', size, mainBoxes, frame, 0.42 + index * 0.2);
+      chosen = spot ?? {
+        x: -size.w * 0.35,
+        y: frame.h * (0.3 + index * 0.3),
+      };
     }
+    const jx = (random() * 2 - 1) * frame.w * 0.006;
+    const jy = (random() * 2 - 1) * frame.h * 0.006;
+    object.x = chosen.x + jx;
+    object.y = chosen.y + jy;
     object.rotation = 0;
-    const box = axisBox(object, scale);
-    if (!crossesFrame(box, frame) && best) {
-      object.x = best.x;
-      object.y = best.y;
+    let box = axisBox(object, scale);
+    if (overlaps(box, mainBoxes, 2) || !crossesFrame(box, frame)) {
+      object.x = chosen.x;
+      object.y = chosen.y;
+      box = axisBox(object, scale);
     }
-    occupied.push(axisBox(object, scale));
-  }
+    occupied.push(box);
+  });
   return copies;
+}
+
+function restsOn(
+  rider: PlacedObject,
+  support: PlacedObject,
+  scale: number,
+): boolean {
+  if (!canRest(rider.objectId, support.objectId)) return false;
+  return contains(
+    faceOf(support.objectId, axisBox(support, scale)),
+    axisBox(rider, scale),
+  );
+}
+
+/** A rider shares its support's depth. Everyone else uses its own center. */
+export function depthAnchor(
+  object: PlacedObject,
+  mains: PlacedObject[],
+  scale: number,
+): number {
+  const support = mains.find(
+    (other) => other.uid !== object.uid && restsOn(object, other, scale),
+  );
+  return support ? support.y : object.y;
 }
 
 /** Backgrounds stay behind. Among mains, lower in the frame is closer. */
@@ -357,24 +496,28 @@ export function orderByDepth(
   scale: number,
 ): PlacedObject[] {
   const byDepth = (left: PlacedObject, right: PlacedObject) =>
-    left.y - right.y || left.uid.localeCompare(right.uid);
+    depthAnchor(left, mains, scale) - depthAnchor(right, mains, scale) ||
+    left.uid.localeCompare(right.uid);
   const ordered = [
-    ...[...backgrounds].sort(byDepth),
+    ...[...backgrounds].sort(
+      (left, right) => left.y - right.y || left.uid.localeCompare(right.uid),
+    ),
     ...[...mains].sort(byDepth),
   ];
+  const riders = [...mains]
+    .filter((rider) => mains.some((support) => restsOn(rider, support, scale)))
+    .sort((left, right) => right.y - left.y);
+  for (const rider of riders) {
+    const support = mains.find((object) => restsOn(rider, object, scale));
+    if (!support) continue;
+    const from = ordered.indexOf(rider);
+    const at = ordered.indexOf(support);
+    if (from < 0 || at < 0 || from > at) continue;
+    ordered.splice(from, 1);
+    ordered.splice(ordered.indexOf(support) + 1, 0, rider);
+  }
   ordered.forEach((object, index) => {
     object.z = index;
   });
-  for (const rider of mains) {
-    if (!RIDERS.has(rider.objectId)) continue;
-    const support = mains.find((object) => {
-      if (!SUPPORTS.has(object.objectId)) return false;
-      return contains(topFace(axisBox(object, scale)), axisBox(rider, scale));
-    });
-    if (!support || rider.z > support.z) continue;
-    const z = rider.z;
-    rider.z = support.z;
-    support.z = z;
-  }
-  return ordered.sort((left, right) => left.z - right.z);
+  return ordered;
 }

@@ -1,7 +1,7 @@
 import type { FormatId, PlacedObject } from '../model/types.ts';
 import { ensureBackdrop } from './backdrop.ts';
 import type { NameMatch } from './match.ts';
-import { layout, templateById, type TemplateId } from './layout.ts';
+import { layoutScene, templateById, type TemplateId } from './layout.ts';
 
 const TEMPLATE_ORDER: TemplateId[] = ['under-title', 'offset', 'compact'];
 
@@ -70,9 +70,47 @@ export function composePlacements(
     options.withBackgrounds === false
       ? named
       : ensureBackdrop(named, options.format);
+  const scene = layoutScene(objects, template, options.seed);
   return {
     templateId,
-    scale: template.scale,
-    objects: layout(objects, template, options.seed),
+    scale: scene.scale,
+    objects: scene.objects,
+  };
+}
+
+/** Lays out a metaphor pick. Backgrounds are only those the pick named. */
+export function composePick(
+  pick: { main: string[]; background: string[]; template: TemplateId },
+  options: { format: FormatId; seed: number },
+): ComposedScene {
+  const template = templateById(pick.template, options.format);
+  const objects: PlacedObject[] = [];
+  for (const objectId of pick.main) {
+    objects.push({
+      uid: `obj-${objects.length + 1}`,
+      objectId,
+      role: 'main',
+      x: 0,
+      y: 0,
+      rotation: 0,
+      z: pick.main.length - objects.length,
+    });
+  }
+  for (const objectId of pick.background) {
+    objects.push({
+      uid: `obj-${objects.length + 1}`,
+      objectId,
+      role: 'background',
+      x: 0,
+      y: 0,
+      rotation: 0,
+      z: 0,
+    });
+  }
+  const scene = layoutScene(objects, template, options.seed);
+  return {
+    templateId: pick.template,
+    scale: scene.scale,
+    objects: scene.objects,
   };
 }

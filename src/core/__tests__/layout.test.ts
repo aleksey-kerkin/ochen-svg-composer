@@ -9,7 +9,7 @@ import type {
   PlacedObject,
   Slot2D,
 } from '../../model/types.ts';
-import { layout, templateById } from '../layout.ts';
+import { layout, layoutScene, templateById } from '../layout.ts';
 
 const library = manifest as Manifest;
 const TEMPLATE_IDS = ['under-title', 'offset', 'compact'] as const;
@@ -114,38 +114,69 @@ describe('layout', () => {
   it('keeps under-title mains out of the title area in every format', () => {
     for (const format of FORMATS_IDS) {
       const template = templateById('under-title', format);
-      const result = layout(
+      const scene = layoutScene(
         [placed(), placed({ uid: 'obj-2', objectId: 'phone', z: 0 })],
         template,
         7,
       );
       expect(template.safeArea).toBeDefined();
-      for (const object of result.filter((entry) => entry.role === 'main')) {
+      for (const object of scene.objects.filter(
+        (entry) => entry.role === 'main',
+      )) {
         expect(inSafeArea(object, template)).toBe(false);
       }
     }
   });
 
-  it('lets an offset object spill past the frame', () => {
+  it('crops an offset background and keeps the mains inside the frame', () => {
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
       const template = templateById('offset', format);
-      const result = layout(
-        [placed({ z: 3 }), placed({ uid: 'obj-2', objectId: 'puzzle', z: 1 })],
+      const scene = layoutScene(
+        [
+          placed({ z: 3 }),
+          placed({ uid: 'obj-2', objectId: 'puzzle', z: 1 }),
+          placed({
+            uid: 'obj-3',
+            objectId: 'lamp',
+            role: 'background',
+            z: 0,
+          }),
+        ],
         template,
         1,
       );
+      const mains = scene.objects.filter((object) => object.role === 'main');
+      const backgrounds = scene.objects.filter(
+        (object) => object.role === 'background',
+      );
+      expect(backgrounds.length).toBeGreaterThan(0);
+      for (const object of mains) {
+        const item = library.items.find(
+          (entry) => entry.objectId === object.objectId,
+        );
+        const asset = item?.assets.find(
+          (entry) => entry.size === 'L' && entry.role === 'main',
+        );
+        if (!asset) throw new Error(object.objectId);
+        const halfW = (asset.svgSize.w * scene.scale) / 2;
+        const halfH = (asset.svgSize.h * scene.scale) / 2;
+        expect(object.x - halfW).toBeGreaterThanOrEqual(-1);
+        expect(object.y - halfH).toBeGreaterThanOrEqual(-1);
+        expect(object.x + halfW).toBeLessThanOrEqual(frame.w + 1);
+        expect(object.y + halfH).toBeLessThanOrEqual(frame.h + 1);
+      }
       expect(
-        result.some((object) => {
+        backgrounds.some((object) => {
           const item = library.items.find(
             (entry) => entry.objectId === object.objectId,
           );
           const asset = item?.assets.find(
-            (entry) => entry.size === 'L' && entry.role === 'main',
+            (entry) => entry.size === 'L' && entry.role === 'background',
           );
           if (!asset) throw new Error(object.objectId);
-          const halfW = (asset.svgSize.w * template.scale) / 2;
-          const halfH = (asset.svgSize.h * template.scale) / 2;
+          const halfW = (asset.svgSize.w * scene.scale) / 2;
+          const halfH = (asset.svgSize.h * scene.scale) / 2;
           return (
             object.x - halfW < 0 ||
             object.y - halfH < 0 ||

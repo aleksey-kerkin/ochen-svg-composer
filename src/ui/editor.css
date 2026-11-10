@@ -77,7 +77,8 @@
   border-radius: 0.35rem;
 }
 
-.prompt__unknown {
+.prompt__unknown,
+.prompt__source {
   margin: 0;
   font-size: 0.75rem;
   color: rgb(24 24 23 / 0.7);

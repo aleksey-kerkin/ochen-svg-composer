@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
-import { composePlacements } from '../core/compose.ts';
+import { composePick, composePlacements } from '../core/compose.ts';
+import { keywordScene, requestMetaphor } from '../core/llm.ts';
 import { matchByNames, type NameQuery } from '../core/match.ts';
+import type { ScenePick } from '../core/pick.ts';
 import { parsePaletteInput } from '../core/palette.ts';
 import { schemeById, validatePaletteUsage } from '../core/recolor.ts';
 import type {
@@ -24,6 +26,8 @@ type CompositionStore = Composition & {
   customPalettes: Palette[];
   paletteError?: string;
   nameQuery?: NameQuery;
+  metaphor?: { source: 'model' | 'tags'; reason: string };
+  metaphorPending: boolean;
   add: (objectId: string, role: Role) => void;
   move: (uid: string, dx: number, dy: number) => void;
   rotate: (uid: string, deg: number) => void;
@@ -41,6 +45,7 @@ type CompositionStore = Composition & {
   toggleRole: (uid: string) => void;
   cycleColors: (uid: string) => void;
   composeNames: (query: string) => void;
+  composeMetaphor: (query: string) => Promise<void>;
   setWithBackgrounds: (enabled: boolean) => void;
   reseed: () => void;
 };
@@ -91,9 +96,36 @@ function apply(
   return { ...state, ...next, selectedUid: next.selectedUid };
 }
 
-export const useComposition = create<CompositionStore>((set) => ({
+let metaphorTicket = 0;
+
+function applyMetaphor(
+  state: CompositionStore,
+  pick: ScenePick,
+): CompositionStore {
+  const composition = readComposition(state);
+  const composed = composePick(pick, {
+    format: composition.format,
+    seed: composition.seed,
+  });
+  const next: CompositionStore = {
+    ...state,
+    ...composition,
+    templateId: composed.templateId,
+    scale: composed.scale,
+    objects: composed.objects,
+    withBackgrounds: pick.background.length > 0,
+    metaphor: { source: pick.source, reason: pick.reason },
+    metaphorPending: false,
+  };
+  delete next.selectedUid;
+  delete next.nameQuery;
+  return next;
+}
+
+export const useComposition = create<CompositionStore>((set, get) => ({
   ...initialComposition(),
   customPalettes: [],
+  metaphorPending: false,
   add: (objectId, role) =>
     set((state) => apply(state, { type: 'add', objectId, role })),
   move: (uid, dx, dy) =>
@@ -156,7 +188,9 @@ export const useComposition = create<CompositionStore>((set) => ({
     set((state) => {
       const parsed = matchByNames(query, library.items);
       if (parsed.matches.length === 0) {
-        return { ...state, nameQuery: parsed };
+        const next = { ...state, nameQuery: parsed, metaphorPending: false };
+        delete next.metaphor;
+        return next;
       }
       const composition = readComposition(state);
       const composed = composePlacements(parsed.matches, {
@@ -174,9 +208,25 @@ export const useComposition = create<CompositionStore>((set) => ({
         scale: composed.scale,
         objects: composed.objects,
         nameQuery: parsed,
+        metaphorPending: false,
       };
       delete next.selectedUid;
+      delete next.metaphor;
       return next;
     }),
+  composeMetaphor: async (query) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const ticket = ++metaphorTicket;
+    set({ metaphorPending: true });
+    let pick: ScenePick;
+    try {
+      pick = await requestMetaphor(trimmed, get().format);
+    } catch {
+      pick = keywordScene(trimmed);
+    }
+    if (ticket !== metaphorTicket) return;
+    set((state) => applyMetaphor(state, pick));
+  },
   reseed: () => set((state) => apply(state, { type: 'reseed' })),
 }));

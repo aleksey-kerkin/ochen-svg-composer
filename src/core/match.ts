@@ -194,6 +194,67 @@ export function matchByNames(query: string, items: LibraryItem[]): NameQuery {
   return { matches, unknown };
 }
 
+function sameStem(left: string, right: string): boolean {
+  const a = stem(left);
+  const b = stem(right);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+  return shorter.length >= 3 && longer.startsWith(shorter);
+}
+
+export interface KeywordPick {
+  main: string[];
+  background: string[];
+  template: 'under-title' | 'offset' | 'compact';
+  reason: string;
+}
+
+/**
+ * Scores a metaphor against tags (×2) and names or synonyms (×3).
+ * Theme words such as «учёба» stay here; matchByNames ignores tags.
+ */
+export function matchByKeywords(
+  text: string,
+  items: LibraryItem[],
+): KeywordPick {
+  const tokens = normalize(text).match(/[a-zа-я0-9]+/g) ?? [];
+  const scores = new Map<string, number>();
+  for (const item of items) {
+    let score = 0;
+    for (const token of tokens) {
+      if (item.tags.some((tag) => sameStem(token, tag))) score += 2;
+      const named =
+        sameStem(token, item.name.ru) ||
+        sameStem(token, item.name.en) ||
+        item.synonyms.some((word) => sameStem(token, word));
+      if (named) score += 3;
+    }
+    if (score > 0) scores.set(item.objectId, score);
+  }
+  const ranked = [...scores.entries()].sort(
+    (left, right) => right[1] - left[1] || left[0].localeCompare(right[0]),
+  );
+  if (ranked.length === 0) {
+    return {
+      main: ['book', 'phone'],
+      background: [],
+      template: 'offset',
+      reason: 'По смыслу ничего не нашлось, показаны книга и телефон',
+    };
+  }
+  const main = ranked.slice(0, 3).map(([objectId]) => objectId);
+  const background = ranked.slice(3, 5).map(([objectId]) => objectId);
+  const template =
+    main.length <= 1 ? 'under-title' : main.length === 2 ? 'offset' : 'compact';
+  return {
+    main,
+    background,
+    template,
+    reason: 'Собрано по тегам',
+  };
+}
+
 export function libraryItemMatches(item: LibraryItem, query: string): boolean {
   const needle = normalize(query);
   if (!needle) return true;

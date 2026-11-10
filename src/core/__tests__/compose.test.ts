@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { composePlacements } from '../compose.ts';
+import { composePick, composePlacements } from '../compose.ts';
 import { templateById } from '../layout.ts';
 
 describe('composePlacements', () => {
@@ -12,7 +12,10 @@ describe('composePlacements', () => {
       { format: 'portrait', templateId: 'offset', seed: 1 },
     );
     expect(placed.templateId).toBe('offset');
-    expect(placed.scale).toBeCloseTo(templateById('offset', 'portrait').scale);
+    expect(placed.scale).toBeLessThanOrEqual(
+      templateById('offset', 'portrait').scale,
+    );
+    expect(placed.scale).toBeGreaterThan(0.45);
     const mains = placed.objects.filter((object) => object.role === 'main');
     expect(mains.map((object) => object.objectId).sort()).toEqual([
       'flowers',
@@ -97,5 +100,36 @@ describe('composePlacements', () => {
         { format: 'landscape', seed: 1 },
       ).templateId,
     ).toBe('offset');
+  });
+
+  it('lays a metaphor pick out without inventing extra backgrounds', () => {
+    const placed = composePick(
+      {
+        main: ['book', 'pen'],
+        background: [],
+        template: 'offset',
+      },
+      { format: 'square', seed: 1 },
+    );
+    expect(placed.templateId).toBe('offset');
+    expect(placed.objects.map((object) => object.role)).toEqual([
+      'main',
+      'main',
+    ]);
+    const withLamp = composePick(
+      {
+        main: ['headphones'],
+        background: ['lamp'],
+        template: 'compact',
+      },
+      { format: 'landscape', seed: 2 },
+    );
+    const lamp = withLamp.objects.find((object) => object.objectId === 'lamp');
+    const phones = withLamp.objects.find(
+      (object) => object.objectId === 'headphones',
+    );
+    expect(lamp?.role).toBe('background');
+    expect(phones?.role).toBe('main');
+    expect(lamp && phones && lamp.z < phones.z).toBe(true);
   });
 });
