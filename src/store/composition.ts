@@ -117,20 +117,17 @@ export function reduceComposition(
 
 function changeFormat(state: Composition, format: FormatId): Composition {
   if (state.format === format) return state;
-  const ratio = shortSide(format) / shortSide(state.format);
-  const scale = state.scale * ratio;
   if (state.templateId) {
+    const template = templateById(state.templateId, format);
     return keepSelection({
       ...state,
       format,
-      scale,
-      objects: layout(
-        state.objects,
-        templateById(state.templateId, format),
-        state.seed,
-      ),
+      scale: template.scale,
+      objects: layout(state.objects, template, state.seed),
     });
   }
+  const ratio = shortSide(format) / shortSide(state.format);
+  const scale = state.scale * ratio;
   const from = FORMATS[state.format];
   const to = FORMATS[format];
   return {
@@ -149,14 +146,12 @@ function applyTemplate(
   state: Composition,
   templateId: TemplateId,
 ): Composition {
+  const template = templateById(templateId, state.format);
   return keepSelection({
     ...state,
     templateId,
-    objects: layout(
-      state.objects,
-      templateById(templateId, state.format),
-      state.seed,
-    ),
+    scale: template.scale,
+    objects: layout(state.objects, template, state.seed),
   });
 }
 

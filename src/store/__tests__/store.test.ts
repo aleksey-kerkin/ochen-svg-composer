@@ -228,7 +228,8 @@ describe('composition reducer', () => {
       templateId: 'offset',
     });
     expect(next.templateId).toBe('offset');
-    expect(next.scale).toBe(state.scale);
+    expect(next.scale).toBeCloseTo(templateById('offset', 'landscape').scale);
+    expect(next.scale).toBeGreaterThan(defaultScale('landscape') * 1.5);
     expect(next.objects.map((object) => object.objectId).sort()).toEqual([
       'phone',
       'puzzle',
@@ -262,9 +263,8 @@ describe('composition reducer', () => {
       );
     });
     expect(stretched).toBe(false);
-    expect(next.scale).toBeCloseTo(
-      state.scale * (shortSide('portrait') / shortSide('landscape')),
-    );
+    expect(next.scale).toBeCloseTo(templateById('offset', 'portrait').scale);
+    expect(next.scale).toBeGreaterThan(defaultScale('portrait') * 1.5);
   });
 
   it('drops the selection when the template has no slot for it', () => {

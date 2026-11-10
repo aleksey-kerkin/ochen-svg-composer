@@ -124,22 +124,33 @@ describe('layout', () => {
     }
   });
 
-  it('places an offset object outside the frame', () => {
+  it('lets an offset object spill past the frame', () => {
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
+      const template = templateById('offset', format);
       const result = layout(
         [placed({ z: 3 }), placed({ uid: 'obj-2', objectId: 'puzzle', z: 1 })],
-        templateById('offset', format),
+        template,
         1,
       );
       expect(
-        result.some(
-          (object) =>
-            object.x < 0 ||
-            object.y < 0 ||
-            object.x > frame.w ||
-            object.y > frame.h,
-        ),
+        result.some((object) => {
+          const item = library.items.find(
+            (entry) => entry.objectId === object.objectId,
+          );
+          const asset = item?.assets.find(
+            (entry) => entry.size === 'L' && entry.role === 'main',
+          );
+          if (!asset) throw new Error(object.objectId);
+          const halfW = (asset.svgSize.w * template.scale) / 2;
+          const halfH = (asset.svgSize.h * template.scale) / 2;
+          return (
+            object.x - halfW < 0 ||
+            object.y - halfH < 0 ||
+            object.x + halfW > frame.w ||
+            object.y + halfH > frame.h
+          );
+        }),
       ).toBe(true);
     }
   });
@@ -172,14 +183,26 @@ describe('layout', () => {
     }
   });
 
-  it('shares one scale across the templates of a format', () => {
+  it('shares one large scale across the templates of a format', () => {
+    const book = library.items.find((item) => item.objectId === 'book');
+    const asset = book?.assets.find(
+      (entry) => entry.size === 'L' && entry.role === 'main',
+    );
+    if (!asset) throw new Error('missing book');
     for (const format of FORMATS_IDS) {
-      for (const id of TEMPLATE_IDS) {
-        const template = templateById(id, format);
-        expect(template.format).toBe(format);
-        expect(template.scale).toBeCloseTo(defaultScale(format));
-        expect(template.mainSlots.length).toBeGreaterThan(0);
-      }
+      const frame = FORMATS[format];
+      const scales = TEMPLATE_IDS.map((id) => templateById(id, format).scale);
+      expect(new Set(scales.map((scale) => scale.toFixed(5))).size).toBe(1);
+      const scale = scales[0] ?? 0;
+      const cover = Math.max(
+        (asset.svgSize.w * scale) / frame.w,
+        (asset.svgSize.h * scale) / frame.h,
+      );
+      expect(cover).toBeGreaterThan(0.9);
+      expect(scale).toBeGreaterThan(defaultScale(format) * 1.5);
+      expect(templateById('compact', format).mainSlots.length).toBeGreaterThan(
+        1,
+      );
     }
   });
 });
