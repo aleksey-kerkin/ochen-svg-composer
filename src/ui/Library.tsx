@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { libraryItemMatches } from '../core/match.ts';
+import { recolorAsset, resolvePalette } from '../core/recolor.ts';
 import manifest from '../library/manifest.json' with { type: 'json' };
 import { getAsset } from '../library/registry.ts';
 import type { Manifest, Role } from '../model/types.ts';
@@ -11,7 +12,10 @@ export function Library() {
   const [activeRole, setActiveRole] = useState<Role>('main');
   const [search, setSearch] = useState('');
   const size = useComposition((state) => state.size);
+  const paletteId = useComposition((state) => state.paletteId);
+  const customPalettes = useComposition((state) => state.customPalettes);
   const add = useComposition((state) => state.add);
+  const palette = resolvePalette(paletteId, customPalettes);
 
   const visibleItems = items.filter((item) => libraryItemMatches(item, search));
 
@@ -49,6 +53,7 @@ export function Library() {
         <ul className="library__grid">
           {visibleItems.map((item) => {
             const asset = getAsset(item.objectId, size, activeRole);
+            const painted = recolorAsset(asset.inner, palette, activeRole);
             return (
               <li key={item.objectId}>
                 <button
@@ -64,7 +69,7 @@ export function Library() {
                   <span className="library__thumb" aria-hidden="true">
                     <svg
                       viewBox={`0 0 ${asset.svgSize.w} ${asset.svgSize.h}`}
-                      dangerouslySetInnerHTML={{ __html: asset.inner }}
+                      dangerouslySetInnerHTML={{ __html: painted.markup }}
                     />
                   </span>
                   <span className="library__label" data-label={item.name.ru} />

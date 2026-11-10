@@ -31,7 +31,7 @@ describe('validatePick', () => {
       },
       ids,
     );
-    expect(pick?.main).toEqual(['book', 'pen', 'phone']);
+    expect(pick?.main).toEqual(['book', 'pen', 'phone', 'coin']);
     expect(pick?.background).toEqual(['lamp']);
     expect(pick?.template).toBe('compact');
   });
@@ -89,7 +89,7 @@ describe('composeScene', () => {
     expect(result).toMatchObject({
       source: 'model',
       model: PRIMARY_MODEL,
-      main: ['book'],
+      main: ['book', 'pen'],
       background: ['lamp'],
       template: 'under-title',
     });
@@ -105,6 +105,8 @@ describe('composeScene', () => {
     expect(body.response_format).toBeUndefined();
     expect(body.messages[0]?.content).toContain('учёба');
     expect(body.messages[0]?.content).toContain('book');
+    expect(body.messages[0]?.content).toContain('от 2 до 4');
+    expect(body.messages[0]?.content).toContain('wallet');
   });
 
   it('tries the fallback model after a 429 and after a timeout', async () => {
@@ -131,7 +133,7 @@ describe('composeScene', () => {
     );
     expect(seen).toEqual([PRIMARY_MODEL, FALLBACK_MODEL]);
     expect(rateLimited.model).toBe(FALLBACK_MODEL);
-    expect(rateLimited.main).toEqual(['pen']);
+    expect(rateLimited.main).toEqual(['pen', 'book']);
 
     const timed = await composeScene(
       { text: 'учёба', format: 'landscape' },
@@ -158,7 +160,7 @@ describe('composeScene', () => {
       },
     );
     expect(timed.model).toBe(FALLBACK_MODEL);
-    expect(timed.main).toEqual(['folder']);
+    expect(timed.main).toEqual(['folder', 'book']);
     expect(timed.background).toEqual(['coin']);
   });
 

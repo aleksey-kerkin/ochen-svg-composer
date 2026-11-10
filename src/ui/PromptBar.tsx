@@ -83,9 +83,10 @@ export function PromptBar() {
           {metaphorPending ? 'Подбираем…' : 'Собрать'}
         </button>
       </form>
-      {(matches.length > 0 || unknown.length > 0 || metaphor) && (
+      {((!meaning && (matches.length > 0 || unknown.length > 0)) ||
+        (meaning && metaphor)) && (
         <div className="prompt__results">
-          {matches.length > 0 && (
+          {!meaning && matches.length > 0 && (
             <ul className="prompt__chips" aria-label="Распознанные объекты">
               {matches.map((match) => {
                 const label = nameById.get(match.objectId) ?? match.objectId;
@@ -111,7 +112,7 @@ export function PromptBar() {
               })}
             </ul>
           )}
-          {unknown.length > 0 && (
+          {!meaning && unknown.length > 0 && (
             <p className="prompt__unknown" role="status">
               Не распознано: {unknown.join(', ')}
             </p>

@@ -1,7 +1,12 @@
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import type { FormatId, Manifest } from '../model/types.ts';
 import { matchByKeywords } from './match.ts';
-import { finishPick, validatePick, type ScenePick } from './pick.ts';
+import {
+  ensureMainPair,
+  finishPick,
+  validatePick,
+  type ScenePick,
+} from './pick.ts';
 
 const ids = new Set(
   (manifestJson as Manifest).items.map((item) => item.objectId),
@@ -36,7 +41,11 @@ export async function requestMetaphor(
       ? record.model
       : undefined;
   return finishPick(
-    { ...validated, reason: validated.reason || '' },
+    ensureMainPair(
+      { ...validated, reason: validated.reason || '' },
+      text,
+      (manifestJson as Manifest).items,
+    ),
     source,
     model,
   );

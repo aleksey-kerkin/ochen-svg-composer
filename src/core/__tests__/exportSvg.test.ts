@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from 'vitest';
 import { composePlacements } from '../compose.ts';
-import { exportFileName, exportSvg } from '../exportSvg.ts';
+import { exportFileName, exportSvg, localDateStamp } from '../exportSvg.ts';
 import { getAsset } from '../../library/registry.ts';
 import manifest from '../../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../../model/formats.ts';
@@ -234,5 +234,14 @@ describe('exportSvg', () => {
     expect(
       exportFileName({ format: 'square', title: 'Учёба онлайн', date }),
     ).toBe('учёба-онлайн-2026-11-10.svg');
+  });
+
+  it('uses the local calendar date in a fixed timezone, not UTC', () => {
+    const date = new Date('2026-11-10T23:30:00Z');
+    expect(localDateStamp(date, 'Pacific/Kiritimati')).toBe('2026-11-11');
+    expect(date.toISOString().slice(0, 10)).toBe('2026-11-10');
+    expect(exportFileName({ format: 'landscape', date })).toBe(
+      `landscape-${localDateStamp(date)}.svg`,
+    );
   });
 });

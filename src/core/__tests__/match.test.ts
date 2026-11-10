@@ -109,6 +109,19 @@ describe('matchByKeywords', () => {
     ]);
   });
 
+  it('reads «деньги» as wallet and coin, not a single coin', () => {
+    const picked = matchByKeywords('деньги', items);
+    expect(picked.main).toEqual(expect.arrayContaining(['coin', 'wallet']));
+    expect(picked.main.length).toBeGreaterThanOrEqual(2);
+    expect(picked.main.length).toBeLessThanOrEqual(4);
+  });
+
+  it('pairs a lone named object with its partner', () => {
+    const picked = matchByKeywords('монета', items);
+    expect(picked.main).toEqual(expect.arrayContaining(['coin', 'wallet']));
+    expect(picked.main.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('reads «время - деньги» as coin and wallet and «уютный вечер» as lamp and flowers', () => {
     expect(matchByKeywords('время - деньги', items).main).toEqual([
       'coin',

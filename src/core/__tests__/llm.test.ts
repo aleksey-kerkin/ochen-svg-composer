@@ -23,7 +23,7 @@ describe('requestMetaphor', () => {
       ),
     );
     const pick = await requestMetaphor('учёба', 'square');
-    expect(pick.main).toEqual(['book']);
+    expect(pick.main).toEqual(['book', 'pen']);
     expect(pick.background).toEqual(['lamp']);
     expect(pick.source).toBe('model');
     expect(pick.model).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');

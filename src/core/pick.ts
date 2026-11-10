@@ -1,8 +1,9 @@
-import type { LayoutTemplate } from '../model/types.ts';
+import type { LayoutTemplate, LibraryItem } from '../model/types.ts';
+import { expandMains, matchByKeywords } from './match.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
-export const MAIN_LIMIT = 3;
+export const MAIN_LIMIT = 4;
 export const BACKGROUND_LIMIT = 2;
 
 const TEMPLATES = new Set<TemplateId>(['under-title', 'offset', 'compact']);
@@ -64,6 +65,19 @@ export function validatePick(
     background: cleanIds(record.background, ids, BACKGROUND_LIMIT),
     ...(template ? { template } : {}),
     reason,
+  };
+}
+
+/** A model that names one object is paired with a related second main. */
+export function ensureMainPair(
+  pick: ValidatedPick,
+  text: string,
+  items: LibraryItem[],
+): ValidatedPick {
+  const hints = matchByKeywords(text, items).main;
+  return {
+    ...pick,
+    main: expandMains(pick.main, items, hints, pick.background),
   };
 }
 

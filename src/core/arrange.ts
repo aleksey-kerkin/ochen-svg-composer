@@ -344,13 +344,39 @@ function backgroundsFit(
     { ...template, scale },
     () => 0.5,
   );
-  return placed.every((object) => {
-    const box = axisBox(object, scale);
-    if (visibleFraction(box, frame) < MIN_VISIBLE - 1e-6) return false;
-    return mains.every(
-      (main) => intersection(axisBox(main, scale), box) === null,
-    );
-  });
+  return placed.every((object) =>
+    backgroundReadable(object, scale, frame, mains),
+  );
+}
+
+/** Center sits inside the frame, so a tall lamp is not only a sliver at the edge. */
+export function centerClear(
+  center: { x: number; y: number },
+  size: { w: number; h: number },
+  frame: { w: number; h: number },
+): boolean {
+  const marginX = Math.min(Math.max(size.w * 0.34, 28), frame.w * 0.28);
+  const marginY = Math.min(Math.max(size.h * 0.3, 28), frame.h * 0.22);
+  return (
+    center.x >= marginX - 0.5 &&
+    center.x <= frame.w - marginX + 0.5 &&
+    center.y >= marginY - 0.5 &&
+    center.y <= frame.h - marginY + 0.5
+  );
+}
+
+export function backgroundReadable(
+  object: PlacedObject,
+  scale: number,
+  frame: { w: number; h: number },
+  mains: PlacedObject[],
+): boolean {
+  const box = axisBox(object, scale);
+  if (visibleFraction(box, frame) < MIN_VISIBLE - 1e-6) return false;
+  if (!centerClear(object, renderedSize(object, scale), frame)) return false;
+  return mains.every(
+    (main) => intersection(axisBox(main, scale), box) === null,
+  );
 }
 
 /** Largest scale at or below the template scale that keeps the group inside. */
@@ -451,6 +477,7 @@ export function placeEdgeBackgrounds(
       const score = visible + lightCrop;
       if (!fallback || score > fallback.score) fallback = { ...spot, score };
       if (visible < MIN_VISIBLE) continue;
+      if (!centerClear(spot, size, frame)) continue;
       if (!best || score > best.score) best = { ...spot, score };
     }
     const chosen = best ??
@@ -464,7 +491,8 @@ export function placeEdgeBackgrounds(
     if (
       overlaps(box, mainBoxes, 2) ||
       overlaps(box, occupied, 2) ||
-      visibleFraction(box, frame) < MIN_VISIBLE
+      visibleFraction(box, frame) < MIN_VISIBLE ||
+      !centerClear(object, size, frame)
     ) {
       object.x = chosen.x;
       object.y = chosen.y;
