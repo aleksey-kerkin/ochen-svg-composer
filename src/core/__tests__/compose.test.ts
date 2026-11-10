@@ -99,7 +99,7 @@ describe('composePlacements', () => {
         ],
         { format: 'landscape', seed: 1 },
       ).templateId,
-    ).toBe('offset');
+    ).toBe('compact');
   });
 
   it('lays a metaphor pick out without inventing extra backgrounds', () => {

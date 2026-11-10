@@ -9,6 +9,7 @@ import type {
   PlacedObject,
   Slot2D,
 } from '../../model/types.ts';
+import { visibleFraction } from '../geometry.ts';
 import { layout, layoutScene, templateById } from '../layout.ts';
 
 const library = manifest as Manifest;
@@ -166,25 +167,27 @@ describe('layout', () => {
         expect(object.x + halfW).toBeLessThanOrEqual(frame.w + 1);
         expect(object.y + halfH).toBeLessThanOrEqual(frame.h + 1);
       }
-      expect(
-        backgrounds.some((object) => {
-          const item = library.items.find(
-            (entry) => entry.objectId === object.objectId,
-          );
-          const asset = item?.assets.find(
-            (entry) => entry.size === 'L' && entry.role === 'background',
-          );
-          if (!asset) throw new Error(object.objectId);
-          const halfW = (asset.svgSize.w * scene.scale) / 2;
-          const halfH = (asset.svgSize.h * scene.scale) / 2;
-          return (
-            object.x - halfW < 0 ||
-            object.y - halfH < 0 ||
-            object.x + halfW > frame.w ||
-            object.y + halfH > frame.h
-          );
-        }),
-      ).toBe(true);
+      for (const object of backgrounds) {
+        const item = library.items.find(
+          (entry) => entry.objectId === object.objectId,
+        );
+        const asset = item?.assets.find(
+          (entry) => entry.size === 'L' && entry.role === 'background',
+        );
+        if (!asset) throw new Error(object.objectId);
+        const halfW = (asset.svgSize.w * scene.scale) / 2;
+        const halfH = (asset.svgSize.h * scene.scale) / 2;
+        const visible = visibleFraction(
+          {
+            x: object.x - halfW,
+            y: object.y - halfH,
+            w: halfW * 2,
+            h: halfH * 2,
+          },
+          frame,
+        );
+        expect(visible).toBeGreaterThanOrEqual(0.6);
+      }
     }
   });
 

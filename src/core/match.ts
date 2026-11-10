@@ -239,14 +239,13 @@ export function matchByKeywords(
     return {
       main: ['book', 'phone'],
       background: [],
-      template: 'offset',
+      template: 'compact',
       reason: 'По смыслу ничего не нашлось, показаны книга и телефон',
     };
   }
   const main = ranked.slice(0, 3).map(([objectId]) => objectId);
   const background = ranked.slice(3, 5).map(([objectId]) => objectId);
-  const template =
-    main.length <= 1 ? 'under-title' : main.length === 2 ? 'offset' : 'compact';
+  const template = main.length <= 1 ? 'under-title' : 'compact';
   return {
     main,
     background,

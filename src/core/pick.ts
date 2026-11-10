@@ -25,7 +25,6 @@ export interface ScenePick {
 
 export function templateForCount(count: number): TemplateId {
   if (count <= 1) return 'under-title';
-  if (count === 2) return 'offset';
   return 'compact';
 }
 

@@ -3,8 +3,6 @@ import { ensureBackdrop } from './backdrop.ts';
 import type { NameMatch } from './match.ts';
 import { layoutScene, templateById, type TemplateId } from './layout.ts';
 
-const TEMPLATE_ORDER: TemplateId[] = ['under-title', 'offset', 'compact'];
-
 export interface ComposeOptions {
   format: FormatId;
   templateId?: TemplateId;
@@ -46,7 +44,8 @@ function chooseTemplate(
   const capacity = (id: TemplateId) =>
     templateById(id, format).mainSlots.length;
   if (active && capacity(active) >= count) return active;
-  return TEMPLATE_ORDER.find((id) => capacity(id) >= count) ?? 'compact';
+  if (count <= 1) return 'under-title';
+  return 'compact';
 }
 
 /** Named objects stay main. Backgrounds are extra monochrome companions. */
