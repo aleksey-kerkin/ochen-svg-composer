@@ -28,6 +28,8 @@ type CompositionStore = Composition & {
   nameQuery?: NameQuery;
   metaphor?: { source: 'model' | 'tags'; reason: string };
   metaphorPending: boolean;
+  /** Last metaphor or name query, used as the SVG filename. */
+  sceneTitle?: string;
   add: (objectId: string, role: Role) => void;
   move: (uid: string, dx: number, dy: number) => void;
   rotate: (uid: string, deg: number) => void;
@@ -101,6 +103,7 @@ let metaphorTicket = 0;
 function applyMetaphor(
   state: CompositionStore,
   pick: ScenePick,
+  title: string,
 ): CompositionStore {
   const composition = readComposition(state);
   const composed = composePick(pick, {
@@ -115,6 +118,7 @@ function applyMetaphor(
     objects: composed.objects,
     withBackgrounds: pick.background.length > 0,
     metaphor: { source: pick.source, reason: pick.reason },
+    sceneTitle: title,
     metaphorPending: false,
   };
   delete next.selectedUid;
@@ -208,6 +212,7 @@ export const useComposition = create<CompositionStore>((set, get) => ({
         scale: composed.scale,
         objects: composed.objects,
         nameQuery: parsed,
+        sceneTitle: query.trim(),
         metaphorPending: false,
       };
       delete next.selectedUid;
@@ -226,7 +231,7 @@ export const useComposition = create<CompositionStore>((set, get) => ({
       pick = keywordScene(trimmed);
     }
     if (ticket !== metaphorTicket) return;
-    set((state) => applyMetaphor(state, pick));
+    set((state) => applyMetaphor(state, pick, trimmed));
   },
   reseed: () => set((state) => apply(state, { type: 'reseed' })),
 }));

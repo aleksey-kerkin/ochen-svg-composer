@@ -2,6 +2,7 @@ import {
   useLayoutEffect,
   useRef,
   type PointerEvent as ReactPointerEvent,
+  type Ref,
 } from 'react';
 import { getAsset, scopeAsset } from '../library/registry.ts';
 import { frameMarkup, recolorAsset, resolvePalette } from '../core/recolor.ts';
@@ -25,11 +26,7 @@ export function Canvas() {
   const selectedUid = useComposition((state) => state.selectedUid);
   const select = useComposition((state) => state.select);
   const move = useComposition((state) => state.move);
-  const frame = FORMATS[format];
   const palette = resolvePalette(paletteId, customPalettes);
-  const background = frameMarkup(palette, size);
-  const cover = coverPlacement(frame.w, frame.h, background.svgSize.w);
-  const ordered = [...objects].sort((left, right) => left.z - right.z);
 
   function locate(event: ReactPointerEvent<SVGElement>) {
     const ctm = svgRef.current?.getScreenCTM();
@@ -75,43 +72,92 @@ export function Canvas() {
 
   return (
     <div className="canvas-stage">
-      <svg
-        ref={svgRef}
-        viewBox={`0 0 ${frame.w} ${frame.h}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="application"
-        aria-label="Холст"
-        onPointerDown={onFramePointerDown}
-        onPointerMove={onFramePointerMove}
-        onPointerUp={() => {
+      <SceneSvg
+        svgRef={svgRef}
+        format={format}
+        size={size}
+        scale={scale}
+        palette={palette}
+        objects={objects}
+        selectedUid={selectedUid}
+        onFramePointerDown={onFramePointerDown}
+        onFramePointerMove={onFramePointerMove}
+        onFramePointerUp={() => {
           drag.current = null;
         }}
-      >
-        <defs>
-          <clipPath id="frame">
-            <rect width={frame.w} height={frame.h} />
-          </clipPath>
-        </defs>
-        <g clipPath="url(#frame)">
-          <g
-            data-layer="background"
-            transform={coverTransform(cover)}
-            dangerouslySetInnerHTML={{ __html: background.inner }}
-          />
-          {ordered.map((object) => (
-            <SceneObject
-              key={object.uid}
-              object={object}
-              size={size}
-              scale={scale}
-              palette={palette}
-              selected={object.uid === selectedUid}
-              onPointerDown={onObjectPointerDown}
-            />
-          ))}
-        </g>
-      </svg>
+        onObjectPointerDown={onObjectPointerDown}
+      />
     </div>
+  );
+}
+
+export function SceneSvg({
+  svgRef,
+  format,
+  size,
+  scale,
+  palette,
+  objects,
+  selectedUid,
+  onFramePointerDown,
+  onFramePointerMove,
+  onFramePointerUp,
+  onObjectPointerDown,
+}: {
+  svgRef?: Ref<SVGSVGElement>;
+  format: keyof typeof FORMATS;
+  size: Size;
+  scale: number;
+  palette: Palette;
+  objects: PlacedObject[];
+  selectedUid?: string;
+  onFramePointerDown?: () => void;
+  onFramePointerMove?: (event: ReactPointerEvent<SVGSVGElement>) => void;
+  onFramePointerUp?: () => void;
+  onObjectPointerDown?: (
+    event: ReactPointerEvent<SVGGElement>,
+    uid: string,
+  ) => void;
+}) {
+  const frame = FORMATS[format];
+  const background = frameMarkup(palette, size);
+  const cover = coverPlacement(frame.w, frame.h, background.svgSize.w);
+  const ordered = [...objects].sort((left, right) => left.z - right.z);
+  return (
+    <svg
+      ref={svgRef}
+      viewBox={`0 0 ${frame.w} ${frame.h}`}
+      preserveAspectRatio="xMidYMid meet"
+      role="application"
+      aria-label="Холст"
+      onPointerDown={onFramePointerDown}
+      onPointerMove={onFramePointerMove}
+      onPointerUp={onFramePointerUp}
+    >
+      <defs>
+        <clipPath id="frame">
+          <rect width={frame.w} height={frame.h} />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#frame)">
+        <g
+          data-layer="background"
+          transform={coverTransform(cover)}
+          dangerouslySetInnerHTML={{ __html: background.inner }}
+        />
+        {ordered.map((object) => (
+          <SceneObject
+            key={object.uid}
+            object={object}
+            size={size}
+            scale={scale}
+            palette={palette}
+            selected={object.uid === selectedUid}
+            onPointerDown={onObjectPointerDown}
+          />
+        ))}
+      </g>
+    </svg>
   );
 }
 
@@ -128,7 +174,7 @@ function SceneObject({
   scale: number;
   palette: Palette;
   selected: boolean;
-  onPointerDown: (event: ReactPointerEvent<SVGGElement>, uid: string) => void;
+  onPointerDown?: (event: ReactPointerEvent<SVGGElement>, uid: string) => void;
 }) {
   const asset = scopeAsset(
     getAsset(object.objectId, size, object.role),
@@ -166,7 +212,7 @@ function SceneObject({
       data-object={object.objectId}
       data-role={object.role}
       transform={objectTransform(object, scale, asset.svgSize)}
-      onPointerDown={(event) => onPointerDown(event, object.uid)}
+      onPointerDown={(event) => onPointerDown?.(event, object.uid)}
     >
       <g ref={contentRef} dangerouslySetInnerHTML={{ __html: painted }} />
       {selected ? (
