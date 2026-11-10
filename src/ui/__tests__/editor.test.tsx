@@ -228,4 +228,46 @@ describe('editor', () => {
     expect(state.templateId).toBe('under-title');
     expect(state.objects).toHaveLength(1);
   });
+
+  it('compose prompt «книга, телефон и пазлы» adds book, phone, puzzle and shows chips', () => {
+    render(<App />);
+    const prompt = screen.getByRole('textbox', { name: 'Собрать из объектов' });
+    fireEvent.change(prompt, {
+      target: { value: 'книга, телефон и пазлы' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    const ids = useComposition
+      .getState()
+      .objects.map((object) => object.objectId)
+      .sort();
+    expect(ids).toEqual(['book', 'phone', 'puzzle']);
+    expect(screen.getByText('Книга')).toBeTruthy();
+    expect(screen.getByText('Телефон')).toBeTruthy();
+    expect(screen.getByText('Пазлы')).toBeTruthy();
+  });
+
+  it('unknown compose word shows «Не распознано» and keeps existing objects', () => {
+    render(<App />);
+    const prompt = screen.getByRole('textbox', { name: 'Собрать из объектов' });
+    fireEvent.change(prompt, {
+      target: { value: 'книга, телефон и пазлы' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    fireEvent.change(prompt, { target: { value: 'хрюндель' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    expect(screen.getByText(/Не распознано/)).toBeTruthy();
+    const ids = useComposition
+      .getState()
+      .objects.map((object) => object.objectId)
+      .sort();
+    expect(ids).toEqual(['book', 'phone', 'puzzle']);
+  });
+
+  it('library search «ваза» hides Книга but keeps Цветы', () => {
+    render(<App />);
+    const search = screen.getByRole('textbox', { name: 'Поиск по библиотеке' });
+    fireEvent.change(search, { target: { value: 'ваза' } });
+    expect(screen.queryByRole('button', { name: 'Книга' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Цветы/ })).toBeTruthy();
+  });
 });

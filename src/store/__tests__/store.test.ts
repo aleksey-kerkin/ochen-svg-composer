@@ -390,6 +390,34 @@ describe('useComposition', () => {
     expect(useComposition.getState().paletteError).toMatch(/8/);
   });
 
+  it('replaces the scene from a name query and keeps size, palette, and editing', () => {
+    useComposition.getState().setPalette('peach');
+    useComposition.getState().setSize('S');
+    useComposition.getState().setFormat('portrait');
+    useComposition.getState().add('lamp', 'main');
+    useComposition.getState().composeNames('наушники и ваза');
+    const placed = useComposition.getState();
+    expect(placed.paletteId).toBe('peach');
+    expect(placed.size).toBe('S');
+    expect(placed.format).toBe('portrait');
+    expect(placed.objects.map((object) => object.objectId).sort()).toEqual([
+      'flowers',
+      'headphones',
+    ]);
+    expect(placed.nameQuery?.unknown).toEqual([]);
+    const uid = placed.objects[0]?.uid ?? '';
+    const before = placed.objects[0]?.x ?? 0;
+    useComposition.getState().move(uid, 12, 0);
+    expect(useComposition.getState().objects[0]?.x).toBeCloseTo(before + 12);
+    useComposition.getState().composeNames('хрюндель');
+    const skipped = useComposition.getState();
+    expect(skipped.objects.map((object) => object.objectId).sort()).toEqual([
+      'flowers',
+      'headphones',
+    ]);
+    expect(skipped.nameQuery?.unknown).toEqual(['хрюндель']);
+  });
+
   it('adds an object through the zustand store', () => {
     useComposition.getState().add('wallet', 'background');
     const state = useComposition.getState();
