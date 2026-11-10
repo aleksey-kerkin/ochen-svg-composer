@@ -7,6 +7,7 @@ import {
   coverPlacement,
   coverTransform,
 } from '../../model/formats.ts';
+import { renderScale } from '../../model/scale.ts';
 import { useComposition } from '../../store/useComposition.ts';
 import { Canvas } from '../Canvas.tsx';
 import { objectTransform } from '../transforms.ts';
@@ -85,6 +86,27 @@ describe('Canvas', () => {
     expect(moved?.y).toBeCloseTo(300);
     fireEvent.pointerDown(svg);
     expect(useComposition.getState().selectedUid).toBeUndefined();
+  });
+
+  it('draws S and L at the same visible size', () => {
+    useComposition.getState().add('book', 'main');
+    useComposition.getState().setSize('S');
+    const view = render(<Canvas />);
+    const state = useComposition.getState();
+    const object = state.objects[0];
+    expect(object).toBeDefined();
+    const asset = getAsset('book', 'S', 'main');
+    const node = view.container.querySelector('[data-object="book"]');
+    expect(node?.getAttribute('transform')).toBe(
+      objectTransform(
+        object ?? { x: 0, y: 0, rotation: 0 },
+        renderScale(state.scale, 'S'),
+        asset.svgSize,
+      ),
+    );
+    expect(node?.getAttribute('transform')).not.toContain(
+      `scale(${state.scale})`,
+    );
   });
 
   it('swaps the background asset when the scheme changes', () => {

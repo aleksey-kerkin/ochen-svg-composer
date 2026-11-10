@@ -66,6 +66,17 @@
   gap: 0.35rem;
 }
 
+.toolbar__scale {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.toolbar__scale input[type='range'] {
+  width: 8rem;
+}
+
 .seg {
   margin: 0;
   padding: 0.35rem 0.65rem;

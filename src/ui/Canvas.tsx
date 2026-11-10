@@ -9,6 +9,7 @@ import {
   scopeAsset,
 } from '../library/registry.ts';
 import { FORMATS, coverPlacement, coverTransform } from '../model/formats.ts';
+import { renderScale } from '../model/scale.ts';
 import type { PlacedObject, Size } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
 import { applyInverse } from './svgPoint.ts';
@@ -30,7 +31,7 @@ export function Canvas() {
   const format = useComposition((state) => state.format);
   const size = useComposition((state) => state.size);
   const paletteId = useComposition((state) => state.paletteId);
-  const scale = useComposition((state) => state.scale);
+  const scale = useComposition((state) => renderScale(state.scale, state.size));
   const objects = useComposition((state) => state.objects);
   const selectedUid = useComposition((state) => state.selectedUid);
   const select = useComposition((state) => state.select);

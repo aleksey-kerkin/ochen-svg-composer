@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { defaultScale } from '../../model/scale.ts';
 import type { Composition, PlacedObject } from '../../model/types.ts';
 import { initialComposition, reduceComposition } from '../composition.ts';
 import { useComposition } from '../useComposition.ts';
@@ -51,7 +52,16 @@ describe('composition reducer', () => {
     const state = place('book');
     expect(state.objects[0]).toBeDefined();
     expect(state.objects[0]).not.toHaveProperty('scale');
-    expect(state.scale).toBe(1);
+    expect(state.scale).toBeCloseTo(defaultScale('landscape'));
+    expect(state.scale).toBeLessThanOrEqual(0.4);
+  });
+
+  it('changes the one scene scale and leaves objects unscaled', () => {
+    const state = place('book');
+    const next = reduceComposition(state, { type: 'setScale', scale: 0.5 });
+    expect(next.scale).toBe(0.5);
+    expect(next.objects[0]).not.toHaveProperty('scale');
+    expect(next.objects).toEqual(state.objects);
   });
 
   it('moves an object by dx and dy without changing the previous state', () => {
@@ -167,10 +177,17 @@ describe('composition reducer', () => {
       dx: 12,
       dy: 8,
     });
-    const next = reduceComposition(moved, { type: 'setSize', size: 'S' });
+    const turned = reduceComposition(moved, {
+      type: 'rotate',
+      uid,
+      deg: 20,
+    });
+    const next = reduceComposition(turned, { type: 'setSize', size: 'S' });
     expect(next.size).toBe('S');
-    expect(byUid(next, uid).x).toBe(byUid(moved, uid).x);
-    expect(byUid(next, uid).y).toBe(byUid(moved, uid).y);
+    expect(next.scale).toBe(turned.scale);
+    expect(byUid(next, uid).x).toBe(byUid(turned, uid).x);
+    expect(byUid(next, uid).y).toBe(byUid(turned, uid).y);
+    expect(byUid(next, uid).rotation).toBe(20);
   });
 
   it('changes the format without moving objects', () => {
@@ -181,6 +198,26 @@ describe('composition reducer', () => {
     });
     expect(next.format).toBe('portrait');
     expect(next.objects).toEqual(state.objects);
+    expect(next.scale).toBeCloseTo(defaultScale('portrait'));
+  });
+
+  it('keeps a custom scale proportional to the short side', () => {
+    const state = reduceComposition(initialComposition(), {
+      type: 'setScale',
+      scale: 0.5,
+    });
+    const square = reduceComposition(state, {
+      type: 'setFormat',
+      format: 'square',
+    });
+    expect(square.scale).toBeCloseTo(
+      0.5 * (defaultScale('square') / defaultScale('landscape')),
+    );
+    const back = reduceComposition(square, {
+      type: 'setFormat',
+      format: 'landscape',
+    });
+    expect(back.scale).toBeCloseTo(0.5);
   });
 
   it('sets the palette id', () => {

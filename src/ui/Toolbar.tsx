@@ -16,8 +16,10 @@ export function Toolbar() {
   const format = useComposition((state) => state.format);
   const size = useComposition((state) => state.size);
   const paletteId = useComposition((state) => state.paletteId);
+  const scale = useComposition((state) => state.scale);
   const setFormat = useComposition((state) => state.setFormat);
   const setSize = useComposition((state) => state.setSize);
+  const setScale = useComposition((state) => state.setScale);
   const setPalette = useComposition((state) => state.setPalette);
 
   return (
@@ -48,6 +50,18 @@ export function Toolbar() {
           </button>
         ))}
       </div>
+      <label className="toolbar__scale">
+        Масштаб
+        <input
+          type="range"
+          min={0.15}
+          max={1.2}
+          step={0.01}
+          aria-label="Масштаб"
+          value={scale}
+          onChange={(event) => setScale(Number(event.currentTarget.value))}
+        />
+      </label>
       <div className="toolbar__group" role="group" aria-label="Цветовая схема">
         {schemes.map((scheme) => (
           <button

@@ -111,13 +111,36 @@ describe('editor', () => {
     expect(useComposition.getState().selectedUid).toBeUndefined();
   });
 
+  it('the scale slider sets one scene scale', () => {
+    render(<App />);
+    const slider = screen.getByRole('slider', { name: 'Масштаб' });
+    fireEvent.change(slider, { target: { value: '0.5' } });
+    expect(useComposition.getState().scale).toBeCloseTo(0.5);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ручка' }));
+    for (const object of useComposition.getState().objects) {
+      expect(object).not.toHaveProperty('scale');
+    }
+    expect(useComposition.getState().scale).toBeCloseTo(0.5);
+  });
+
+  it('names the role control as an action', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Сделать фоновым' }));
+    expect(useComposition.getState().objects[0]?.role).toBe('background');
+    expect(
+      screen.getByRole('button', { name: 'Сделать главным' }),
+    ).toBeTruthy();
+  });
+
   it('a keydown whose target is an input does not remove the selection', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
     act(() => {
       useComposition.getState().select('obj-1');
     });
-    const slider = screen.getByRole('slider');
+    const slider = screen.getByRole('slider', { name: /Поворот/ });
     fireEvent.keyDown(slider, { key: 'Delete' });
     expect(useComposition.getState().objects).toHaveLength(1);
     expect(useComposition.getState().selectedUid).toBe('obj-1');

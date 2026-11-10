@@ -75,7 +75,7 @@ export function Inspector() {
               Выше
             </button>
             <button type="button" onClick={() => toggleRole(selected.uid)}>
-              {selected.role === 'main' ? 'Главный' : 'Фоновый'}
+              {selected.role === 'main' ? 'Сделать фоновым' : 'Сделать главным'}
             </button>
           </div>
         </div>
