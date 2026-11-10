@@ -76,3 +76,39 @@ export function composePlacements(
     objects: layout(objects, template, options.seed),
   };
 }
+
+/** Lays out a metaphor pick. Backgrounds are only those the pick named. */
+export function composePick(
+  pick: { main: string[]; background: string[]; template: TemplateId },
+  options: { format: FormatId; seed: number },
+): ComposedScene {
+  const template = templateById(pick.template, options.format);
+  const objects: PlacedObject[] = [];
+  for (const objectId of pick.main) {
+    objects.push({
+      uid: `obj-${objects.length + 1}`,
+      objectId,
+      role: 'main',
+      x: 0,
+      y: 0,
+      rotation: 0,
+      z: pick.main.length - objects.length,
+    });
+  }
+  for (const objectId of pick.background) {
+    objects.push({
+      uid: `obj-${objects.length + 1}`,
+      objectId,
+      role: 'background',
+      x: 0,
+      y: 0,
+      rotation: 0,
+      z: 0,
+    });
+  }
+  return {
+    templateId: pick.template,
+    scale: template.scale,
+    objects: layout(objects, template, options.seed),
+  };
+}

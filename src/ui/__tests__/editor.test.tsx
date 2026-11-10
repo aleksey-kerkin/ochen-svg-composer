@@ -5,13 +5,15 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
 } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../../App.tsx';
 import { useComposition } from '../../store/useComposition.ts';
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
 });
 
 beforeEach(() => {
@@ -315,6 +317,64 @@ describe('editor', () => {
         .map((object) => object.objectId)
         .sort(),
     ).toEqual(['book', 'phone', 'puzzle']);
+  });
+
+  it('meaning mode «учёба» falls back to tags when the server is down', async () => {
+    vi.stubGlobal('fetch', () => Promise.reject(new Error('offline')));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Смысл' }));
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Метафора или заголовок' }),
+      { target: { value: 'учёба' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    await waitFor(() => {
+      expect(screen.getByText(/по тегам/i)).toBeTruthy();
+    });
+    expect(
+      useComposition
+        .getState()
+        .objects.filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['book', 'pen']);
+    expect(useComposition.getState().metaphor?.source).toBe('tags');
+  });
+
+  it('meaning mode shows «модель» when the server returns a model pick', async () => {
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            main: ['headphones'],
+            background: ['lamp'],
+            template: 'compact',
+            source: 'model',
+            model: 'nvidia/nemotron-3.5-lightning-30b-a3b',
+            reason: 'музыка',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    );
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Смысл' }));
+    fireEvent.change(
+      screen.getByRole('textbox', { name: 'Метафора или заголовок' }),
+      { target: { value: 'музыка для работы' } },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    await waitFor(() => {
+      expect(screen.getByText(/модель/)).toBeTruthy();
+    });
+    const state = useComposition.getState();
+    expect(state.metaphor?.source).toBe('model');
+    expect(
+      state.objects.find((object) => object.objectId === 'lamp')?.role,
+    ).toBe('background');
+    expect(
+      state.objects.find((object) => object.objectId === 'headphones')?.role,
+    ).toBe('main');
   });
 
   it('library search «ваза» hides Книга but keeps Цветы', () => {

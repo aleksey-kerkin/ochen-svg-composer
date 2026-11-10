@@ -26,5 +26,11 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: ['api/**/*.ts', 'scripts/**/*.ts', 'vite.config.ts'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.node },
+    },
+  },
   eslintConfigPrettier,
 );

@@ -9,6 +9,7 @@
     "test": "vitest run",
     "lint": "eslint . && prettier --check .",
     "manifest": "node scripts/build-manifest.ts",
+    "smoke:nvidia": "node --experimental-strip-types scripts/smoke-nvidia.ts",
     "preview": "vite preview"
   },
   "dependencies": {
