@@ -21,6 +21,18 @@ beforeEach(() => {
 });
 
 describe('Canvas', () => {
+  it('clips portrait content to the 2:3 frame', () => {
+    useComposition.getState().setFormat('portrait');
+    useComposition.getState().add('book', 'main');
+    const view = render(<Canvas />);
+    const clip = view.container.querySelector('#frame rect');
+    expect(clip?.getAttribute('width')).toBe('1080');
+    expect(clip?.getAttribute('height')).toBe('1620');
+    const group = view.container.querySelector('g[clip-path="url(#frame)"]');
+    const object = view.container.querySelector('[data-object="book"]');
+    expect(group?.contains(object ?? null)).toBe(true);
+  });
+
   it('clips the frame and cover-fits the scheme background', () => {
     const view = render(<Canvas />);
     const svg = view.container.querySelector('svg');

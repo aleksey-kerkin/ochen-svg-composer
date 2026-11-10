@@ -73,6 +73,8 @@ export interface Composition {
   format: FormatId;
   size: Size;
   paletteId: string;
+  /** Absent while the scene is placed by hand. */
+  templateId?: LayoutTemplate['id'];
   scale: number;
   objects: PlacedObject[];
   selectedUid?: string;

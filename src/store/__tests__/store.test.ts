@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { defaultScale } from '../../model/scale.ts';
+import { layout, templateById } from '../../core/layout.ts';
+import { FORMATS } from '../../model/formats.ts';
+import { defaultScale, shortSide } from '../../model/scale.ts';
 import type { Composition, PlacedObject } from '../../model/types.ts';
 import { initialComposition, reduceComposition } from '../composition.ts';
 import { useComposition } from '../useComposition.ts';
@@ -190,15 +192,92 @@ describe('composition reducer', () => {
     expect(byUid(next, uid).rotation).toBe(20);
   });
 
-  it('changes the format without moving objects', () => {
-    const state = place('book');
+  it('keeps object centers as fractions of the frame when no template is set', () => {
+    let state = place('pen', place('book'));
+    const uid = state.objects[0]?.uid ?? '';
+    state = reduceComposition(state, {
+      type: 'move',
+      uid,
+      dx: 100,
+      dy: -40,
+    });
+    state = reduceComposition(state, { type: 'rotate', uid, deg: 15 });
     const next = reduceComposition(state, {
       type: 'setFormat',
       format: 'portrait',
     });
+    const from = FORMATS.landscape;
+    const to = FORMATS.portrait;
+    const object = byUid(state, uid);
     expect(next.format).toBe('portrait');
-    expect(next.objects).toEqual(state.objects);
+    expect(next.templateId).toBeUndefined();
+    expect(byUid(next, uid).x).toBeCloseTo((object.x / from.w) * to.w);
+    expect(byUid(next, uid).y).toBeCloseTo((object.y / from.h) * to.h);
+    expect(byUid(next, uid).rotation).toBe(15);
+    expect(byUid(next, uid).z).toBe(object.z);
+    expect(next.scale).toBeCloseTo(
+      state.scale * (shortSide('portrait') / shortSide('landscape')),
+    );
     expect(next.scale).toBeCloseTo(defaultScale('portrait'));
+  });
+
+  it('lays current objects into the template and drops those without a slot', () => {
+    const state = place('phone', place('puzzle', place('book')));
+    const next = reduceComposition(state, {
+      type: 'setTemplate',
+      templateId: 'offset',
+    });
+    expect(next.templateId).toBe('offset');
+    expect(next.scale).toBe(state.scale);
+    expect(next.objects.map((object) => object.objectId).sort()).toEqual([
+      'phone',
+      'puzzle',
+    ]);
+    expect(next.objects).toEqual(
+      layout(state.objects, templateById('offset', 'landscape'), state.seed),
+    );
+  });
+
+  it('reapplies the active template on a format change instead of scaling pixels', () => {
+    const state = reduceComposition(place('pen', place('book')), {
+      type: 'setTemplate',
+      templateId: 'offset',
+    });
+    const next = reduceComposition(state, {
+      type: 'setFormat',
+      format: 'portrait',
+    });
+    expect(next.templateId).toBe('offset');
+    expect(next.objects).toEqual(
+      layout(state.objects, templateById('offset', 'portrait'), state.seed),
+    );
+    const from = FORMATS.landscape;
+    const to = FORMATS.portrait;
+    const stretched = state.objects.every((object) => {
+      const placed = next.objects.find((entry) => entry.uid === object.uid);
+      return (
+        placed !== undefined &&
+        Math.abs(placed.x - (object.x / from.w) * to.w) < 0.01 &&
+        Math.abs(placed.y - (object.y / from.h) * to.h) < 0.01
+      );
+    });
+    expect(stretched).toBe(false);
+    expect(next.scale).toBeCloseTo(
+      state.scale * (shortSide('portrait') / shortSide('landscape')),
+    );
+  });
+
+  it('drops the selection when the template has no slot for it', () => {
+    const state = reduceComposition(place('phone', place('book')), {
+      type: 'select',
+      uid: 'obj-1',
+    });
+    const next = reduceComposition(state, {
+      type: 'setTemplate',
+      templateId: 'under-title',
+    });
+    expect(next.objects.map((object) => object.uid)).toEqual(['obj-2']);
+    expect(next.selectedUid).toBeUndefined();
   });
 
   it('keeps a custom scale proportional to the short side', () => {

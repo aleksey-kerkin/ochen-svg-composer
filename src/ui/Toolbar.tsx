@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
+import { TEMPLATE_LABELS, templateIds } from '../core/layout.ts';
 import manifest from '../library/manifest.json' with { type: 'json' };
 import type { FormatId, Manifest, Size } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
@@ -15,10 +16,12 @@ const SIZES: Size[] = ['S', 'L'];
 
 export function Toolbar() {
   const format = useComposition((state) => state.format);
+  const templateId = useComposition((state) => state.templateId);
   const size = useComposition((state) => state.size);
   const paletteId = useComposition((state) => state.paletteId);
   const scale = useComposition((state) => state.scale);
   const setFormat = useComposition((state) => state.setFormat);
+  const setTemplate = useComposition((state) => state.setTemplate);
   const setSize = useComposition((state) => state.setSize);
   const setScale = useComposition((state) => state.setScale);
   const setPalette = useComposition((state) => state.setPalette);
@@ -53,6 +56,19 @@ export function Toolbar() {
             onClick={() => setFormat(entry.id)}
           >
             {entry.label}
+          </button>
+        ))}
+      </div>
+      <div className="toolbar__group" role="group" aria-label="Шаблон">
+        {templateIds().map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="seg"
+            aria-pressed={templateId === id}
+            onClick={() => setTemplate(id)}
+          >
+            {TEMPLATE_LABELS[id]}
           </button>
         ))}
       </div>

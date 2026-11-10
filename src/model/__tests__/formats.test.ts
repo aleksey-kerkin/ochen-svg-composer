@@ -10,6 +10,15 @@ function expectCover(frameW: number, frameH: number, side: number) {
   expect(placed.y + drawn / 2).toBeCloseTo(frameH / 2);
 }
 
+describe('FORMATS', () => {
+  it('keeps landscape and square and uses a 2:3 portrait', () => {
+    expect(FORMATS.landscape).toEqual({ w: 1200, h: 630 });
+    expect(FORMATS.square).toEqual({ w: 1080, h: 1080 });
+    expect(FORMATS.portrait).toEqual({ w: 1080, h: 1620 });
+    expect(FORMATS.portrait.h / FORMATS.portrait.w).toBeCloseTo(3 / 2);
+  });
+});
+
 describe('coverPlacement', () => {
   it('covers a landscape frame and keeps the background centered', () => {
     const frame = FORMATS.landscape;
