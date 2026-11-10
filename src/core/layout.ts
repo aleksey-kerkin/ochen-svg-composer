@@ -5,7 +5,12 @@ import type {
   PlacedObject,
   Slot2D,
 } from '../model/types.ts';
-import { arrangeMains, orderByDepth, placeEdgeBackgrounds } from './arrange.ts';
+import {
+  arrangeMains,
+  fitScale,
+  orderByDepth,
+  placeEdgeBackgrounds,
+} from './arrange.ts';
 import { axisBox, crossesFrame } from './geometry.ts';
 
 export type TemplateId = LayoutTemplate['id'];
@@ -252,6 +257,32 @@ function placeBackgrounds(
   const placed = [...slotted, ...extra];
   for (const object of placed) pushOutside(object, frame, template.scale);
   return placed;
+}
+
+export interface LaidOutScene {
+  scale: number;
+  objects: PlacedObject[];
+}
+
+/**
+ * Picks a shared scale that fits two or more mains, then lays the scene out.
+ * One main keeps the template's hero scale and its slot.
+ */
+export function layoutScene(
+  objects: PlacedObject[],
+  template: LayoutTemplate,
+  seed: number,
+): LaidOutScene {
+  const mains = objects.filter((object) => object.role === 'main');
+  const reserveBackdrop = objects.some(
+    (object) => object.role === 'background',
+  );
+  const scale =
+    mains.length <= 1
+      ? template.scale
+      : fitScale(mains, template, reserveBackdrop);
+  const fitted: LayoutTemplate = { ...template, scale };
+  return { scale, objects: layout(objects, fitted, seed) };
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */

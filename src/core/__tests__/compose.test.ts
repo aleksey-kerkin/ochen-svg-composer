@@ -12,7 +12,10 @@ describe('composePlacements', () => {
       { format: 'portrait', templateId: 'offset', seed: 1 },
     );
     expect(placed.templateId).toBe('offset');
-    expect(placed.scale).toBeCloseTo(templateById('offset', 'portrait').scale);
+    expect(placed.scale).toBeLessThanOrEqual(
+      templateById('offset', 'portrait').scale,
+    );
+    expect(placed.scale).toBeGreaterThan(0.45);
     const mains = placed.objects.filter((object) => object.role === 'main');
     expect(mains.map((object) => object.objectId).sort()).toEqual([
       'flowers',

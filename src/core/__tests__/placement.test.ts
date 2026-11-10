@@ -2,16 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { FORMATS } from '../../model/formats.ts';
 import type { FormatId, PlacedObject } from '../../model/types.ts';
 import { composePlacements } from '../compose.ts';
-import {
-  RIDERS,
-  SUPPORTS,
-  axisBox,
-  contains,
-  crossesFrame,
-  intersection,
-  topFace,
-} from '../geometry.ts';
-import { layout, templateById } from '../layout.ts';
+import { axisBox, contains, crossesFrame, intersection } from '../geometry.ts';
+import { layoutScene, templateById } from '../layout.ts';
+import { canRest, faceOf } from '../profiles.ts';
 
 const FORMATS_IDS: FormatId[] = ['landscape', 'square', 'portrait'];
 
@@ -29,7 +22,10 @@ function placed(over: Partial<PlacedObject> = {}): PlacedObject {
 }
 
 function stacked(rider: PlacedObject, support: PlacedObject, scale: number) {
-  return contains(topFace(axisBox(support, scale)), axisBox(rider, scale));
+  return contains(
+    faceOf(support.objectId, axisBox(support, scale)),
+    axisBox(rider, scale),
+  );
 }
 
 function expectMains(objects: PlacedObject[], scale: number) {
@@ -40,16 +36,12 @@ function expectMains(objects: PlacedObject[], scale: number) {
       const b = mains[right];
       if (!a || !b) continue;
       const hit = intersection(axisBox(a, scale), axisBox(b, scale));
-      const rider = RIDERS.has(a.objectId)
+      const rider = canRest(a.objectId, b.objectId)
         ? a
-        : RIDERS.has(b.objectId)
+        : canRest(b.objectId, a.objectId)
           ? b
           : undefined;
-      const support = SUPPORTS.has(a.objectId)
-        ? a
-        : SUPPORTS.has(b.objectId)
-          ? b
-          : undefined;
+      const support = rider === a ? b : rider === b ? a : undefined;
       if (
         hit &&
         rider &&
@@ -75,17 +67,19 @@ describe('placement geometry', () => {
     for (const format of FORMATS_IDS) {
       for (const seed of [1, 2, 7]) {
         const template = templateById('compact', format);
-        const result = layout(
+        const scene = layoutScene(
           [placed({ z: 2 }), placed({ uid: 'obj-2', objectId: 'phone', z: 1 })],
           template,
           seed,
         );
-        const book = result.find((object) => object.objectId === 'book');
-        const phone = result.find((object) => object.objectId === 'phone');
+        const book = scene.objects.find((object) => object.objectId === 'book');
+        const phone = scene.objects.find(
+          (object) => object.objectId === 'phone',
+        );
         if (!book || !phone) throw new Error(format);
-        expect(stacked(phone, book, template.scale)).toBe(true);
+        expect(stacked(phone, book, scene.scale)).toBe(true);
         expect(phone.z).toBeGreaterThan(book.z);
-        expectMains(result, template.scale);
+        expectMains(scene.objects, scene.scale);
       }
     }
   });
@@ -93,7 +87,7 @@ describe('placement geometry', () => {
   it('keeps a puzzle off the book when the phone already fills the top face', () => {
     for (const format of FORMATS_IDS) {
       const template = templateById('compact', format);
-      const result = layout(
+      const scene = layoutScene(
         [
           placed({ z: 3 }),
           placed({ uid: 'obj-2', objectId: 'phone', z: 2 }),
@@ -102,35 +96,34 @@ describe('placement geometry', () => {
         template,
         3,
       );
-      const book = result.find((object) => object.objectId === 'book');
-      const phone = result.find((object) => object.objectId === 'phone');
-      const puzzle = result.find((object) => object.objectId === 'puzzle');
+      const book = scene.objects.find((object) => object.objectId === 'book');
+      const phone = scene.objects.find((object) => object.objectId === 'phone');
+      const puzzle = scene.objects.find(
+        (object) => object.objectId === 'puzzle',
+      );
       if (!book || !phone || !puzzle) throw new Error('missing');
-      expect(stacked(phone, book, template.scale)).toBe(true);
+      expect(stacked(phone, book, scene.scale)).toBe(true);
       expect(phone.z).toBeGreaterThan(book.z);
-      const puzzleOnBook = stacked(puzzle, book, template.scale);
+      const puzzleOnBook = stacked(puzzle, book, scene.scale);
       if (!puzzleOnBook) {
         expect(
           intersection(
-            axisBox(puzzle, template.scale),
-            axisBox(book, template.scale),
+            axisBox(puzzle, scene.scale),
+            axisBox(book, scene.scale),
           ),
         ).toBeNull();
       }
       expect(
-        intersection(
-          axisBox(puzzle, template.scale),
-          axisBox(phone, template.scale),
-        ),
+        intersection(axisBox(puzzle, scene.scale), axisBox(phone, scene.scale)),
       ).toBeNull();
-      expectMains(result, template.scale);
+      expectMains(scene.objects, scene.scale);
     }
   });
 
   it('puts headphones beside the vase, with the lower object in front', () => {
     for (const format of FORMATS_IDS) {
       const template = templateById('offset', format);
-      const result = layout(
+      const scene = layoutScene(
         [
           placed({ objectId: 'headphones', z: 2 }),
           placed({ uid: 'obj-2', objectId: 'flowers', z: 1 }),
@@ -138,16 +131,18 @@ describe('placement geometry', () => {
         template,
         4,
       );
-      expectMains(result, template.scale);
-      const headphones = result.find(
+      expectMains(scene.objects, scene.scale);
+      const headphones = scene.objects.find(
         (object) => object.objectId === 'headphones',
       );
-      const vase = result.find((object) => object.objectId === 'flowers');
+      const vase = scene.objects.find(
+        (object) => object.objectId === 'flowers',
+      );
       if (!headphones || !vase) throw new Error(format);
       expect(
         intersection(
-          axisBox(headphones, template.scale),
-          axisBox(vase, template.scale),
+          axisBox(headphones, scene.scale),
+          axisBox(vase, scene.scale),
         ),
       ).toBeNull();
       const lower = headphones.y > vase.y ? headphones : vase;

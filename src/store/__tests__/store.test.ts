@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { layout, templateById } from '../../core/layout.ts';
+import { layoutScene, templateById } from '../../core/layout.ts';
 import { FORMATS } from '../../model/formats.ts';
 import { defaultScale, shortSide } from '../../model/scale.ts';
 import type { Composition, PlacedObject } from '../../model/types.ts';
@@ -228,8 +228,16 @@ describe('composition reducer', () => {
       templateId: 'offset',
     });
     expect(next.templateId).toBe('offset');
-    expect(next.scale).toBeCloseTo(templateById('offset', 'landscape').scale);
-    expect(next.scale).toBeGreaterThan(defaultScale('landscape') * 1.1);
+    const scene = layoutScene(
+      next.objects,
+      templateById('offset', 'landscape'),
+      state.seed,
+    );
+    expect(next.scale).toBeCloseTo(scene.scale);
+    expect(next.scale).toBeLessThanOrEqual(
+      templateById('offset', 'landscape').scale + 0.0001,
+    );
+    expect(next.scale).toBeGreaterThan(0.2);
     expect(
       next.objects
         .filter((object) => object.role === 'main')
@@ -251,9 +259,12 @@ describe('composition reducer', () => {
       format: 'portrait',
     });
     expect(next.templateId).toBe('offset');
-    expect(next.objects).toEqual(
-      layout(state.objects, templateById('offset', 'portrait'), state.seed),
+    const scene = layoutScene(
+      state.objects,
+      templateById('offset', 'portrait'),
+      state.seed,
     );
+    expect(next.objects).toEqual(scene.objects);
     const from = FORMATS.landscape;
     const to = FORMATS.portrait;
     const stretched = state.objects.every((object) => {
@@ -265,8 +276,10 @@ describe('composition reducer', () => {
       );
     });
     expect(stretched).toBe(false);
-    expect(next.scale).toBeCloseTo(templateById('offset', 'portrait').scale);
-    expect(next.scale).toBeGreaterThan(defaultScale('portrait') * 1.1);
+    expect(next.scale).toBeCloseTo(scene.scale);
+    expect(next.scale).toBeLessThanOrEqual(
+      templateById('offset', 'portrait').scale + 0.0001,
+    );
   });
 
   it('keeps every main and the selection when the template has fewer slots', () => {

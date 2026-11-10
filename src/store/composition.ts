@@ -1,5 +1,5 @@
 import { ensureBackdrop } from '../core/backdrop.ts';
-import { layout, templateById, type TemplateId } from '../core/layout.ts';
+import { layoutScene, templateById, type TemplateId } from '../core/layout.ts';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../model/formats.ts';
 import { defaultScale, shortSide } from '../model/scale.ts';
@@ -125,10 +125,11 @@ function changeFormat(state: Composition, format: FormatId): Composition {
   if (state.templateId) {
     const template = templateById(state.templateId, format);
     const next = { ...state, format };
+    const scene = layoutScene(objectsForTemplate(next), template, state.seed);
     return keepSelection({
       ...next,
-      scale: template.scale,
-      objects: layout(objectsForTemplate(next), template, state.seed),
+      scale: scene.scale,
+      objects: scene.objects,
     });
   }
   const ratio = shortSide(format) / shortSide(state.format);
@@ -160,10 +161,11 @@ function applyTemplate(
 ): Composition {
   const template = templateById(templateId, state.format);
   const next = { ...state, templateId };
+  const scene = layoutScene(objectsForTemplate(next), template, state.seed);
   return keepSelection({
     ...next,
-    scale: template.scale,
-    objects: layout(objectsForTemplate(next), template, state.seed),
+    scale: scene.scale,
+    objects: scene.objects,
   });
 }
 

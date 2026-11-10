@@ -1,7 +1,7 @@
 import type { FormatId, PlacedObject } from '../model/types.ts';
 import { ensureBackdrop } from './backdrop.ts';
 import type { NameMatch } from './match.ts';
-import { layout, templateById, type TemplateId } from './layout.ts';
+import { layoutScene, templateById, type TemplateId } from './layout.ts';
 
 const TEMPLATE_ORDER: TemplateId[] = ['under-title', 'offset', 'compact'];
 
@@ -70,10 +70,11 @@ export function composePlacements(
     options.withBackgrounds === false
       ? named
       : ensureBackdrop(named, options.format);
+  const scene = layoutScene(objects, template, options.seed);
   return {
     templateId,
-    scale: template.scale,
-    objects: layout(objects, template, options.seed),
+    scale: scene.scale,
+    objects: scene.objects,
   };
 }
 
@@ -106,9 +107,10 @@ export function composePick(
       z: 0,
     });
   }
+  const scene = layoutScene(objects, template, options.seed);
   return {
     templateId: pick.template,
-    scale: template.scale,
-    objects: layout(objects, template, options.seed),
+    scale: scene.scale,
+    objects: scene.objects,
   };
 }

@@ -1,5 +1,6 @@
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import type { Manifest, PlacedObject, Role } from '../model/types.ts';
+import { PLACEMENT } from './profiles.ts';
 
 const library = manifestJson as Manifest;
 
@@ -11,14 +12,25 @@ export interface Box {
 }
 
 /**
- * Upper portion of a support's box: the open pages of a book, the top of a
- * folder or wallet. A rider that sits on the support must fit inside this
- * rectangle. Fractions are of the support's axis-aligned box.
+ * Book's open pages. Kept for the phone-on-book checks. Other supports use
+ * their own face in `profiles.ts`.
  */
-export const TOP_FACE = { x: 0.14, y: 0.08, w: 0.72, h: 0.52 };
+export const TOP_FACE = PLACEMENT.book?.face ?? {
+  x: 0.14,
+  y: 0.08,
+  w: 0.72,
+  h: 0.52,
+};
 
-export const SUPPORTS = new Set(['book', 'folder', 'wallet']);
-export const RIDERS = new Set(['phone', 'puzzle', 'pen', 'coin']);
+export const SUPPORTS = new Set(
+  Object.values(PLACEMENT)
+    .filter((entry) => entry.partners.length > 0)
+    .map((entry) => entry.objectId),
+);
+
+export const RIDERS = new Set(
+  Object.values(PLACEMENT).flatMap((entry) => [...entry.partners]),
+);
 
 export function assetSize(
   objectId: string,
