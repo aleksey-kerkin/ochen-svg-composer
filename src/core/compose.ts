@@ -1,5 +1,5 @@
-import { FORMATS } from '../model/formats.ts';
 import type { FormatId, PlacedObject } from '../model/types.ts';
+import { ensureBackdrop } from './backdrop.ts';
 import type { NameMatch } from './match.ts';
 import { layout, templateById, type TemplateId } from './layout.ts';
 
@@ -9,6 +9,8 @@ export interface ComposeOptions {
   format: FormatId;
   templateId?: TemplateId;
   seed: number;
+  /** Default on. Off keeps only the named main objects. */
+  withBackgrounds?: boolean;
 }
 
 export interface ComposedScene {
@@ -47,7 +49,7 @@ function chooseTemplate(
   return TEMPLATE_ORDER.find((id) => capacity(id) >= count) ?? 'compact';
 }
 
-/** First objects take main slots. The rest become background and stay in the scene. */
+/** Named objects stay main. Backgrounds are extra monochrome companions. */
 export function composePlacements(
   matches: NameMatch[],
   options: ComposeOptions,
@@ -59,28 +61,18 @@ export function composePlacements(
     options.templateId,
   );
   const template = templateById(templateId, options.format);
-  const assigned = expanded.map((object, index) => ({
+  const named = expanded.map((object, index) => ({
     ...object,
-    role:
-      index < template.mainSlots.length
-        ? ('main' as const)
-        : ('background' as const),
+    role: 'main' as const,
     z: expanded.length - index,
   }));
-  const placed = layout(assigned, template, options.seed);
-  const frame = FORMATS[options.format];
-  const overflow = assigned
-    .filter((object) => !placed.some((entry) => entry.uid === object.uid))
-    .map((object, index) => ({
-      ...object,
-      role: 'background' as const,
-      x: frame.w * 0.5 + index * 36,
-      y: frame.h * 0.5 + index * 36,
-      z: -1 - index,
-    }));
+  const objects =
+    options.withBackgrounds === false
+      ? named
+      : ensureBackdrop(named, options.format);
   return {
     templateId,
     scale: template.scale,
-    objects: [...placed, ...overflow],
+    objects: layout(objects, template, options.seed),
   };
 }

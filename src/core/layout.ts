@@ -5,6 +5,8 @@ import type {
   PlacedObject,
   Slot2D,
 } from '../model/types.ts';
+import { arrangeMains, orderByDepth, placeEdgeBackgrounds } from './arrange.ts';
+import { axisBox, crossesFrame } from './geometry.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
@@ -26,8 +28,10 @@ const JITTER = 0.03;
  */
 const TEMPLATE_SCALE: Record<FormatId, number> = {
   landscape: 0.74,
-  square: 1.05,
-  portrait: 1.05,
+  // Short side is 1080. Large enough that a book fills the width, and still
+  // leaves a band where a second main or a monochrome background can show.
+  square: 0.72,
+  portrait: 0.72,
 };
 
 const TITLE_SAFE = { x: 0, y: 0, w: 1, h: 0.4 };
@@ -191,7 +195,66 @@ function place(
   });
 }
 
-/** Puts current scene objects into the template. Extra objects are dropped. */
+const EDGE_SLOTS: Slot2D[] = [
+  { x: 1.04, y: 0.16, rotation: -8 },
+  { x: -0.06, y: 0.86, rotation: 7 },
+  { x: 0.12, y: 1.04, rotation: 4 },
+];
+
+function pushOutside(
+  object: PlacedObject,
+  frame: { w: number; h: number },
+  scale: number,
+): void {
+  const box = axisBox(object, scale);
+  if (crossesFrame(box, frame)) return;
+  const left = box.x;
+  const right = frame.w - (box.x + box.w);
+  const top = box.y;
+  const bottom = frame.h - (box.y + box.h);
+  const nearest = Math.min(left, right, top, bottom);
+  if (nearest === left) object.x -= left + 12;
+  else if (nearest === right) object.x += right + 12;
+  else if (nearest === top) object.y -= top + 12;
+  else object.y += bottom + 12;
+}
+
+function placeBackgrounds(
+  objects: PlacedObject[],
+  template: LayoutTemplate,
+  random: () => number,
+  frame: { w: number; h: number },
+): PlacedObject[] {
+  const slotted = place(
+    objects,
+    template.backgroundSlots,
+    () => 0,
+    random,
+    frame,
+  );
+  const extra = objects
+    .slice(template.backgroundSlots.length)
+    .map((object, index) => {
+      const edge = EDGE_SLOTS[index % EDGE_SLOTS.length];
+      if (!edge) return object;
+      const next: PlacedObject = {
+        uid: object.uid,
+        objectId: object.objectId,
+        role: object.role,
+        x: (edge.x + (random() * 2 - 1) * JITTER) * frame.w,
+        y: (edge.y + (random() * 2 - 1) * JITTER) * frame.h,
+        rotation: edge.rotation ?? 0,
+        z: 0,
+      };
+      if (object.colorShift !== undefined) next.colorShift = object.colorShift;
+      return next;
+    });
+  const placed = [...slotted, ...extra];
+  for (const object of placed) pushOutside(object, frame, template.scale);
+  return placed;
+}
+
+/** Puts every scene object into the template. Mains are not dropped. */
 export function layout(
   objects: PlacedObject[],
   template: LayoutTemplate,
@@ -203,26 +266,13 @@ export function layout(
   const backgrounds = rank(
     objects.filter((object) => object.role === 'background'),
   );
-  const mainCount = Math.min(mains.length, template.mainSlots.length);
-  const backgroundCount = Math.min(
-    backgrounds.length,
-    template.backgroundSlots.length,
-  );
-  const placedMains = place(
-    mains,
-    template.mainSlots,
-    (index) => backgroundCount + (mainCount - 1 - index),
-    random,
-    frame,
-  );
-  const placedBackgrounds = place(
-    backgrounds,
-    template.backgroundSlots,
-    (index) => backgroundCount - 1 - index,
-    random,
-    frame,
-  );
-  return [...placedBackgrounds, ...placedMains].sort(
-    (left, right) => left.z - right.z,
-  );
+  const placedMains =
+    mains.length <= 1
+      ? place(mains, template.mainSlots, () => 0, random, frame)
+      : arrangeMains(mains, template, random);
+  const placedBackgrounds =
+    mains.length === 0
+      ? placeBackgrounds(backgrounds, template, random, frame)
+      : placeEdgeBackgrounds(backgrounds, placedMains, template, random);
+  return orderByDepth(placedBackgrounds, placedMains, template.scale);
 }

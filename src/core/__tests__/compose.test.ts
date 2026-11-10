@@ -13,11 +13,22 @@ describe('composePlacements', () => {
     );
     expect(placed.templateId).toBe('offset');
     expect(placed.scale).toBeCloseTo(templateById('offset', 'portrait').scale);
-    expect(placed.objects.map((object) => object.objectId).sort()).toEqual([
+    const mains = placed.objects.filter((object) => object.role === 'main');
+    expect(mains.map((object) => object.objectId).sort()).toEqual([
       'flowers',
       'headphones',
     ]);
-    expect(placed.objects.every((object) => object.role === 'main')).toBe(true);
+    const backgrounds = placed.objects.filter(
+      (object) => object.role === 'background',
+    );
+    expect(backgrounds.length).toBeGreaterThanOrEqual(1);
+    expect(backgrounds.length).toBeLessThanOrEqual(2);
+    expect(
+      backgrounds.every(
+        (object) =>
+          object.objectId !== 'flowers' && object.objectId !== 'headphones',
+      ),
+    ).toBe(true);
   });
 
   it('picks a wider template instead of dropping objects', () => {
@@ -30,14 +41,15 @@ describe('composePlacements', () => {
       { format: 'square', templateId: 'under-title', seed: 2 },
     );
     expect(placed.templateId).toBe('compact');
-    expect(placed.objects).toHaveLength(3);
-    expect(placed.objects.every((object) => object.role === 'main')).toBe(true);
+    const mains = placed.objects.filter((object) => object.role === 'main');
+    expect(mains).toHaveLength(3);
+    expect(mains.every((object) => object.role === 'main')).toBe(true);
     expect(
       placed.objects.find((object) => object.objectId === 'book')?.role,
     ).toBe('main');
   });
 
-  it('makes objects beyond the main slots background and keeps overflow', () => {
+  it('keeps every named object main and adds background companions', () => {
     const four = composePlacements(
       [
         { objectId: 'book', count: 1 },
@@ -47,21 +59,26 @@ describe('composePlacements', () => {
       ],
       { format: 'landscape', seed: 1 },
     );
-    expect(four.objects).toHaveLength(4);
+    const mains = four.objects.filter((object) => object.role === 'main');
+    expect(mains.map((object) => object.objectId).sort()).toEqual([
+      'book',
+      'pen',
+      'phone',
+      'puzzle',
+    ]);
     expect(
-      four.objects.filter((object) => object.role === 'main'),
-    ).toHaveLength(3);
-    expect(four.objects.find((object) => object.objectId === 'pen')?.role).toBe(
-      'background',
-    );
+      four.objects.filter((object) => object.role === 'background').length,
+    ).toBeGreaterThanOrEqual(1);
 
     const six = composePlacements([{ objectId: 'coin', count: 6 }], {
       format: 'landscape',
       templateId: 'compact',
       seed: 3,
+      withBackgrounds: false,
     });
     expect(six.objects).toHaveLength(6);
     expect(new Set(six.objects.map((object) => object.uid)).size).toBe(6);
+    expect(six.objects.every((object) => object.role === 'main')).toBe(true);
   });
 
   it('uses the smallest fitting template when none is active', () => {

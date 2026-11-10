@@ -206,7 +206,12 @@ describe('editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Со смещением' }));
     const state = useComposition.getState();
     expect(state.templateId).toBe('offset');
-    expect(state.objects).toHaveLength(2);
+    expect(
+      state.objects.filter((object) => object.role === 'main'),
+    ).toHaveLength(2);
+    expect(state.objects.some((object) => object.role === 'background')).toBe(
+      true,
+    );
     expect(
       screen
         .getByRole('button', { name: 'Со смещением' })
@@ -219,14 +224,19 @@ describe('editor', () => {
     ).not.toBe('true');
   });
 
-  it('«Под заголовком» with two main objects leaves one object and sets templateId under-title', () => {
+  it('«Под заголовком» keeps both main objects and sets templateId under-title', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
     fireEvent.click(screen.getByRole('button', { name: 'Телефон' }));
     fireEvent.click(screen.getByRole('button', { name: 'Под заголовком' }));
     const state = useComposition.getState();
     expect(state.templateId).toBe('under-title');
-    expect(state.objects).toHaveLength(1);
+    expect(
+      state.objects
+        .filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['book', 'phone']);
   });
 
   it('compose prompt «книга, телефон и пазлы» adds book, phone, puzzle and shows chips', () => {
@@ -236,11 +246,14 @@ describe('editor', () => {
       target: { value: 'книга, телефон и пазлы' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
-    const ids = useComposition
-      .getState()
-      .objects.map((object) => object.objectId)
-      .sort();
-    expect(ids).toEqual(['book', 'phone', 'puzzle']);
+    const objects = useComposition.getState().objects;
+    expect(
+      objects
+        .filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['book', 'phone', 'puzzle']);
+    expect(objects.some((object) => object.role === 'background')).toBe(true);
     expect(screen.getByText('Книга')).toBeTruthy();
     expect(screen.getByText('Телефон')).toBeTruthy();
     expect(screen.getByText('Пазлы')).toBeTruthy();
@@ -256,11 +269,52 @@ describe('editor', () => {
     fireEvent.change(prompt, { target: { value: 'хрюндель' } });
     fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
     expect(screen.getByText(/Не распознано/)).toBeTruthy();
-    const ids = useComposition
-      .getState()
-      .objects.map((object) => object.objectId)
-      .sort();
-    expect(ids).toEqual(['book', 'phone', 'puzzle']);
+    const objects = useComposition.getState().objects;
+    expect(
+      objects
+        .filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['book', 'phone', 'puzzle']);
+    expect(objects.some((object) => object.role === 'background')).toBe(true);
+  });
+
+  it('turns background companions off and back on', () => {
+    render(<App />);
+    const toggle = screen.getByRole('button', {
+      name: 'С фоновыми объектами',
+    });
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    const prompt = screen.getByRole('textbox', { name: 'Собрать из объектов' });
+    fireEvent.change(prompt, {
+      target: { value: 'книга, телефон и пазлы' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Собрать' }));
+    expect(
+      useComposition
+        .getState()
+        .objects.some((object) => object.role === 'background'),
+    ).toBe(true);
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(
+      useComposition
+        .getState()
+        .objects.every((object) => object.role === 'main'),
+    ).toBe(true);
+    fireEvent.click(toggle);
+    expect(
+      useComposition
+        .getState()
+        .objects.some((object) => object.role === 'background'),
+    ).toBe(true);
+    expect(
+      useComposition
+        .getState()
+        .objects.filter((object) => object.role === 'main')
+        .map((object) => object.objectId)
+        .sort(),
+    ).toEqual(['book', 'phone', 'puzzle']);
   });
 
   it('library search «ваза» hides Книга but keeps Цветы', () => {

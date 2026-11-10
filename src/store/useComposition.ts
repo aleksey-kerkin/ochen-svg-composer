@@ -41,6 +41,7 @@ type CompositionStore = Composition & {
   toggleRole: (uid: string) => void;
   cycleColors: (uid: string) => void;
   composeNames: (query: string) => void;
+  setWithBackgrounds: (enabled: boolean) => void;
   reseed: () => void;
 };
 
@@ -58,6 +59,9 @@ function readComposition(state: CompositionStore): Composition {
   }
   if (state.selectedUid !== undefined) {
     composition.selectedUid = state.selectedUid;
+  }
+  if (state.withBackgrounds !== undefined) {
+    composition.withBackgrounds = state.withBackgrounds;
   }
   return composition;
 }
@@ -146,6 +150,8 @@ export const useComposition = create<CompositionStore>((set) => ({
     set((state) => apply(state, { type: 'toggleRole', uid })),
   cycleColors: (uid) =>
     set((state) => apply(state, { type: 'cycleColors', uid })),
+  setWithBackgrounds: (enabled) =>
+    set((state) => apply(state, { type: 'setWithBackgrounds', enabled })),
   composeNames: (query) =>
     set((state) => {
       const parsed = matchByNames(query, library.items);
@@ -159,6 +165,7 @@ export const useComposition = create<CompositionStore>((set) => ({
           ? { templateId: composition.templateId }
           : {}),
         seed: composition.seed,
+        withBackgrounds: composition.withBackgrounds !== false,
       });
       const next: CompositionStore = {
         ...state,
