@@ -34,6 +34,12 @@ interface TagEntry {
   tags: string[];
 }
 
+const SCHEME_NAMES: Record<string, string> = {
+  lilac: 'Сирень',
+  peach: 'Персик',
+  teal: 'Бирюза',
+};
+
 const root = process.cwd();
 
 function readJson<T>(relativePath: string): T {
@@ -148,9 +154,14 @@ function buildSchemes(palettes: SourcePalette[]): Scheme[] {
       requireFile(`src/assets/backgrounds/${palette.id}.${size}.svg`);
     }
 
+    const name = SCHEME_NAMES[palette.id];
+    if (!name) {
+      throw new Error(`Palette ${palette.id} has no display name`);
+    }
+
     return {
       id: palette.id,
-      name: palette.id,
+      name,
       colors,
       backgroundAsset: {
         L: `/src/assets/backgrounds/${palette.id}.L.svg`,

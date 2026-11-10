@@ -1,14 +1,12 @@
 :root {
   font-family: system-ui, sans-serif;
   line-height: 1.5;
+  color: #181817;
 }
 
-body {
+html,
+body,
+#root {
+  height: 100%;
   margin: 0;
-}
-
-main {
-  max-width: 40rem;
-  margin: 2rem auto;
-  padding: 0 1rem;
 }

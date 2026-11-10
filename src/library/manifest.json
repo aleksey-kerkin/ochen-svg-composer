@@ -1079,7 +1079,7 @@
   "schemes": [
     {
       "id": "lilac",
-      "name": "lilac",
+      "name": "Сирень",
       "colors": {
         "bg.base": "#d7cdf5",
         "bg.mid": "#aa9bf0",
@@ -1097,7 +1097,7 @@
     },
     {
       "id": "peach",
-      "name": "peach",
+      "name": "Персик",
       "colors": {
         "bg.base": "#fdd7b9",
         "bg.mid": "#fac896",
@@ -1115,7 +1115,7 @@
     },
     {
       "id": "teal",
-      "name": "teal",
+      "name": "Бирюза",
       "colors": {
         "bg.base": "#beebeb",
         "bg.mid": "#80dada",

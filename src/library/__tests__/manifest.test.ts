@@ -145,7 +145,9 @@ describe('library manifest', () => {
     for (const scheme of manifest.schemes) {
       expect(scheme.colors).toEqual(SCHEME_COLORS[scheme.id]);
       expect(Object.keys(scheme.colors)).toEqual([...SLOT_ORDER]);
-      expect(scheme.name.length).toBeGreaterThan(0);
+      expect(scheme.name).toBe(
+        { lilac: 'Сирень', peach: 'Персик', teal: 'Бирюза' }[scheme.id],
+      );
       for (const size of ['L', 'S'] as const) {
         const src = scheme.backgroundAsset[size];
         expect(src).toBe(`/src/assets/backgrounds/${scheme.id}.${size}.svg`);

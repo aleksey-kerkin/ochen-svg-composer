@@ -1,9 +1,20 @@
+import { Canvas } from './ui/Canvas.tsx';
+import { Inspector } from './ui/Inspector.tsx';
+import { Library } from './ui/Library.tsx';
+import { Toolbar } from './ui/Toolbar.tsx';
+import { useEditorHotkeys } from './ui/useEditorHotkeys.ts';
+import './ui/editor.css';
+
 function App() {
+  useEditorHotkeys();
+
   return (
-    <main>
-      <h1>Конструктор иллюстраций</h1>
-      <p>Редактор сцены в этой ревизии не входит в объём работ.</p>
-    </main>
+    <div className="editor">
+      <Toolbar />
+      <Library />
+      <Canvas />
+      <Inspector />
+    </div>
   );
 }
 
