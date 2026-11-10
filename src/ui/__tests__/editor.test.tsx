@@ -198,4 +198,34 @@ describe('editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Сделать фоновым' }));
     expect(screen.queryByRole('button', { name: 'Другие цвета' })).toBeNull();
   });
+
+  it('«Со смещением» keeps two main objects, sets templateId offset, and presses the template button', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Телефон' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Со смещением' }));
+    const state = useComposition.getState();
+    expect(state.templateId).toBe('offset');
+    expect(state.objects).toHaveLength(2);
+    expect(
+      screen
+        .getByRole('button', { name: 'Со смещением' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(
+      screen
+        .getByRole('button', { name: 'Под заголовком' })
+        .getAttribute('aria-pressed'),
+    ).not.toBe('true');
+  });
+
+  it('«Под заголовком» with two main objects leaves one object and sets templateId under-title', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Телефон' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Под заголовком' }));
+    const state = useComposition.getState();
+    expect(state.templateId).toBe('under-title');
+    expect(state.objects).toHaveLength(1);
+  });
 });

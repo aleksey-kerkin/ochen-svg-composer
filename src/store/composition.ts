@@ -1,3 +1,4 @@
+import { layout, templateById, type TemplateId } from '../core/layout.ts';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../model/formats.ts';
 import { defaultScale, shortSide } from '../model/scale.ts';
@@ -20,6 +21,7 @@ export type CompositionAction =
   | { type: 'sendBackward'; uid: string }
   | { type: 'select'; uid?: string }
   | { type: 'setFormat'; format: FormatId }
+  | { type: 'setTemplate'; templateId: TemplateId }
   | { type: 'setSize'; size: Size }
   | { type: 'setScale'; scale: number }
   | { type: 'setPalette'; paletteId: string }
@@ -71,15 +73,10 @@ export function reduceComposition(
       return stepZ(state, action.uid, -1);
     case 'select':
       return selectObject(state, action.uid);
-    case 'setFormat': {
-      if (state.format === action.format) return state;
-      const ratio = shortSide(action.format) / shortSide(state.format);
-      return {
-        ...state,
-        format: action.format,
-        scale: state.scale * ratio,
-      };
-    }
+    case 'setFormat':
+      return changeFormat(state, action.format);
+    case 'setTemplate':
+      return applyTemplate(state, action.templateId);
     case 'setScale':
       if (!Number.isFinite(action.scale) || action.scale <= 0) {
         throw new Error('scale must be a positive number');
@@ -116,6 +113,58 @@ export function reduceComposition(
       return unreachable;
     }
   }
+}
+
+function changeFormat(state: Composition, format: FormatId): Composition {
+  if (state.format === format) return state;
+  if (state.templateId) {
+    const template = templateById(state.templateId, format);
+    return keepSelection({
+      ...state,
+      format,
+      scale: template.scale,
+      objects: layout(state.objects, template, state.seed),
+    });
+  }
+  const ratio = shortSide(format) / shortSide(state.format);
+  const scale = state.scale * ratio;
+  const from = FORMATS[state.format];
+  const to = FORMATS[format];
+  return {
+    ...state,
+    format,
+    scale,
+    objects: state.objects.map((object) => ({
+      ...object,
+      x: (object.x / from.w) * to.w,
+      y: (object.y / from.h) * to.h,
+    })),
+  };
+}
+
+function applyTemplate(
+  state: Composition,
+  templateId: TemplateId,
+): Composition {
+  const template = templateById(templateId, state.format);
+  return keepSelection({
+    ...state,
+    templateId,
+    scale: template.scale,
+    objects: layout(state.objects, template, state.seed),
+  });
+}
+
+function keepSelection(state: Composition): Composition {
+  if (
+    state.selectedUid !== undefined &&
+    !state.objects.some((object) => object.uid === state.selectedUid)
+  ) {
+    const next: Composition = { ...state };
+    delete next.selectedUid;
+    return next;
+  }
+  return state;
 }
 
 function addObject(

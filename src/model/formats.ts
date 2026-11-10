@@ -1,10 +1,10 @@
 import type { FormatId } from './types.ts';
 
-/** Frame sizes in pixels. Square and portrait are assumption [A] from the spec. */
+/** Frame sizes in pixels. Landscape is from the brief; square and portrait are 1:1 and 2:3. */
 export const FORMATS: Record<FormatId, { w: number; h: number }> = {
   landscape: { w: 1200, h: 630 },
   square: { w: 1080, h: 1080 },
-  portrait: { w: 1080, h: 1350 },
+  portrait: { w: 1080, h: 1620 },
 };
 
 export interface CoverPlacement {

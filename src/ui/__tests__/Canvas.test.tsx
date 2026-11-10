@@ -21,6 +21,18 @@ beforeEach(() => {
 });
 
 describe('Canvas', () => {
+  it('clips portrait content to the 2:3 frame', () => {
+    useComposition.getState().setFormat('portrait');
+    useComposition.getState().add('book', 'main');
+    const view = render(<Canvas />);
+    const clip = view.container.querySelector('#frame rect');
+    expect(clip?.getAttribute('width')).toBe('1080');
+    expect(clip?.getAttribute('height')).toBe('1620');
+    const group = view.container.querySelector('g[clip-path="url(#frame)"]');
+    const object = view.container.querySelector('[data-object="book"]');
+    expect(group?.contains(object ?? null)).toBe(true);
+  });
+
   it('clips the frame and cover-fits the scheme background', () => {
     const view = render(<Canvas />);
     const svg = view.container.querySelector('svg');
@@ -59,6 +71,21 @@ describe('Canvas', () => {
     }
   });
 
+  it('sizes the svg from the viewBox so every frame can fit the stage', () => {
+    for (const format of ['landscape', 'square', 'portrait'] as const) {
+      useComposition.setState(useComposition.getInitialState(), true);
+      useComposition.getState().setFormat(format);
+      const view = render(<Canvas />);
+      const svg = view.container.querySelector('svg');
+      const frame = FORMATS[format];
+      expect(svg?.getAttribute('viewBox')).toBe(`0 0 ${frame.w} ${frame.h}`);
+      expect(svg?.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
+      expect(svg?.hasAttribute('width')).toBe(false);
+      expect(svg?.hasAttribute('height')).toBe(false);
+      view.unmount();
+    }
+  });
+
   it('selects an object and drags it in SVG units', () => {
     useComposition.getState().add('coin', 'main');
     const view = render(<Canvas />);
@@ -86,6 +113,40 @@ describe('Canvas', () => {
     expect(moved?.y).toBeCloseTo(300);
     fireEvent.pointerDown(svg);
     expect(useComposition.getState().selectedUid).toBeUndefined();
+  });
+
+  it('drags through a scaled getScreenCTM instead of raw client pixels', () => {
+    useComposition.getState().add('coin', 'main');
+    const view = render(<Canvas />);
+    const svg = view.container.querySelector('svg') as SVGSVGElement;
+    const fit = 0.4;
+    const originX = 80;
+    const originY = 50;
+    svg.getScreenCTM = () =>
+      ({
+        a: fit,
+        b: 0,
+        c: 0,
+        d: fit,
+        e: originX,
+        f: originY,
+      }) as DOMMatrix;
+    const node = view.container.querySelector('[data-object="coin"]');
+    const start = useComposition.getState().objects[0];
+    expect(start).toBeDefined();
+    fireEvent.pointerDown(node as Element, {
+      clientX: originX + (start?.x ?? 0) * fit,
+      clientY: originY + (start?.y ?? 0) * fit,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(svg, {
+      clientX: originX + ((start?.x ?? 0) + 40) * fit,
+      clientY: originY + ((start?.y ?? 0) - 25) * fit,
+      pointerId: 1,
+    });
+    const moved = useComposition.getState().objects[0];
+    expect(moved?.x).toBeCloseTo((start?.x ?? 0) + 40);
+    expect(moved?.y).toBeCloseTo((start?.y ?? 0) - 25);
   });
 
   it('draws S and L at the same visible size', () => {

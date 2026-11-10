@@ -26,6 +26,7 @@ type CompositionStore = Composition & {
   sendBackward: (uid: string) => void;
   select: (uid?: string) => void;
   setFormat: (format: FormatId) => void;
+  setTemplate: (templateId: Composition['templateId']) => void;
   setSize: (size: Size) => void;
   setScale: (scale: number) => void;
   setPalette: (paletteId: string) => void;
@@ -44,6 +45,9 @@ function readComposition(state: CompositionStore): Composition {
     objects: state.objects,
     seed: state.seed,
   };
+  if (state.templateId !== undefined) {
+    composition.templateId = state.templateId;
+  }
   if (state.selectedUid !== undefined) {
     composition.selectedUid = state.selectedUid;
   }
@@ -93,6 +97,11 @@ export const useComposition = create<CompositionStore>((set) => ({
   select: (uid) => set((state) => apply(state, { type: 'select', uid })),
   setFormat: (format) =>
     set((state) => apply(state, { type: 'setFormat', format })),
+  setTemplate: (templateId) =>
+    set((state) => {
+      if (!templateId) return state;
+      return apply(state, { type: 'setTemplate', templateId });
+    }),
   setSize: (size) => set((state) => apply(state, { type: 'setSize', size })),
   setScale: (scale) =>
     set((state) => apply(state, { type: 'setScale', scale })),

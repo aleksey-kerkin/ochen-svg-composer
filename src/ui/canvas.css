@@ -5,13 +5,18 @@
   min-width: 0;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
   background: #f3efe6;
 }
 
 .canvas-stage svg {
+  display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  max-width: 100%;
   max-height: 100%;
+  min-width: 0;
+  min-height: 0;
   background: #fff;
   touch-action: none;
   user-select: none;

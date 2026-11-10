@@ -15,7 +15,11 @@ export function shortSide(format: FormatId): number {
   return Math.min(frame.w, frame.h);
 }
 
-/** Default L scale. Square and portrait follow the frame's short side. */
+/**
+ * Default L scale. Square and portrait follow the frame's short side.
+ * Portrait is 1080×1620, so the short side stays 1080 and the extra height
+ * does not enlarge objects.
+ */
 export function defaultScale(format: FormatId): number {
   return LANDSCAPE_L_SCALE * (shortSide(format) / shortSide('landscape'));
 }

@@ -78,8 +78,7 @@ export function Canvas() {
       <svg
         ref={svgRef}
         viewBox={`0 0 ${frame.w} ${frame.h}`}
-        width={frame.w}
-        height={frame.h}
+        preserveAspectRatio="xMidYMid meet"
         role="application"
         aria-label="Холст"
         onPointerDown={onFramePointerDown}
