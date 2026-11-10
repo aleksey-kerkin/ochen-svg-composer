@@ -8,7 +8,12 @@ import type {
   PlacedObject,
 } from '../../model/types.ts';
 import { ensureBackdrop } from '../backdrop.ts';
-import { axisBox, contains, crossesFrame, intersection } from '../geometry.ts';
+import {
+  axisBox,
+  contains,
+  intersection,
+  visibleFraction,
+} from '../geometry.ts';
 import { layoutScene, templateById, type TemplateId } from '../layout.ts';
 import { depthAnchor } from '../arrange.ts';
 import { canRest, faceOf, PLACEMENT, profile } from '../profiles.ts';
@@ -143,8 +148,9 @@ function problems(
   for (const background of backgrounds) {
     if (background.z >= minMainZ)
       notes.push(`${background.objectId} is in front`);
-    if (!crossesFrame(axisBox(background, scale), frame)) {
-      notes.push(`${background.objectId} is not cropped by the frame`);
+    const visible = visibleFraction(axisBox(background, scale), frame);
+    if (visible < 0.6) {
+      notes.push(`${background.objectId} shows ${Math.round(visible * 100)}%`);
     }
     for (const main of mains) {
       if (intersection(axisBox(background, scale), axisBox(main, scale))) {

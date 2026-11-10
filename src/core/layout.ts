@@ -11,7 +11,12 @@ import {
   orderByDepth,
   placeEdgeBackgrounds,
 } from './arrange.ts';
-import { axisBox, crossesFrame } from './geometry.ts';
+import {
+  axisBox,
+  crossesFrame,
+  intersection,
+  visibleFraction,
+} from './geometry.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
@@ -277,12 +282,46 @@ export function layoutScene(
   const reserveBackdrop = objects.some(
     (object) => object.role === 'background',
   );
-  const scale =
+  let scale =
     mains.length <= 1
       ? template.scale
-      : fitScale(mains, template, reserveBackdrop);
-  const fitted: LayoutTemplate = { ...template, scale };
-  return { scale, objects: layout(objects, fitted, seed) };
+      : fitScale(
+          mains,
+          template,
+          reserveBackdrop
+            ? objects.filter((object) => object.role === 'background')
+            : [],
+        );
+  let placed = layout(objects, { ...template, scale }, seed);
+  for (
+    let attempt = 0;
+    reserveBackdrop &&
+    attempt < 8 &&
+    !backdropReadable(placed, scale, template.format);
+    attempt += 1
+  ) {
+    scale *= 0.9;
+    placed = layout(objects, { ...template, scale }, seed);
+  }
+  return { scale, objects: placed };
+}
+
+function backdropReadable(
+  objects: PlacedObject[],
+  scale: number,
+  format: FormatId,
+): boolean {
+  const frame = FORMATS[format];
+  const mains = objects.filter((object) => object.role === 'main');
+  return objects
+    .filter((object) => object.role === 'background')
+    .every((object) => {
+      const box = axisBox(object, scale);
+      if (visibleFraction(box, frame) < 0.6) return false;
+      return mains.every(
+        (main) => intersection(axisBox(main, scale), box) === null,
+      );
+    });
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */

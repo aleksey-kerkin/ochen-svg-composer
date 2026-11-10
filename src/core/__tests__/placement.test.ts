@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { FORMATS } from '../../model/formats.ts';
 import type { FormatId, PlacedObject } from '../../model/types.ts';
 import { composePlacements } from '../compose.ts';
-import { axisBox, contains, crossesFrame, intersection } from '../geometry.ts';
+import {
+  axisBox,
+  contains,
+  intersection,
+  visibleFraction,
+} from '../geometry.ts';
 import { layoutScene, templateById } from '../layout.ts';
 import { canRest, faceOf } from '../profiles.ts';
 
@@ -176,7 +181,9 @@ describe('placement geometry', () => {
     for (const object of backgrounds) {
       expect(named.has(object.objectId)).toBe(false);
       expect(object.z).toBeLessThan(Math.min(...mains.map((entry) => entry.z)));
-      expect(crossesFrame(axisBox(object, placed.scale), frame)).toBe(true);
+      expect(
+        visibleFraction(axisBox(object, placed.scale), frame),
+      ).toBeGreaterThanOrEqual(0.6);
     }
     expectMains(placed.objects, placed.scale);
   });

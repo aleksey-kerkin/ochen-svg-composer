@@ -98,6 +98,17 @@ export function contains(outer: Box, inner: Box): boolean {
   );
 }
 
+/** Share of the box that lies inside the frame. 1 means fully visible. */
+export function visibleFraction(
+  box: Box,
+  frame: { w: number; h: number },
+): number {
+  if (box.w <= 0 || box.h <= 0) return 0;
+  const hit = intersection(box, { x: 0, y: 0, w: frame.w, h: frame.h });
+  if (!hit) return 0;
+  return (hit.w * hit.h) / (box.w * box.h);
+}
+
 export function crossesFrame(
   box: Box,
   frame: { w: number; h: number },
