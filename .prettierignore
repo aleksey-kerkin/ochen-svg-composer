@@ -7,3 +7,4 @@ assets
 docs
 examples
 api/compose.js
+*.mdc
