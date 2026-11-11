@@ -3,7 +3,7 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "functions": {
-    "api/compose.ts": {
+    "api/compose.js": {
       "maxDuration": 30
     }
   }

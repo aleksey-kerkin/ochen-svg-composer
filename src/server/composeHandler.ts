@@ -1,6 +1,6 @@
-import { composeScene } from '../src/server/composeScene.ts';
-import { readNvidiaKey } from '../src/server/readApiKey.ts';
-import type { FormatId } from '../src/model/types.ts';
+import { composeScene } from './composeScene.ts';
+import { readNvidiaKey } from './readApiKey.ts';
+import type { FormatId } from '../model/types.ts';
 
 interface NodeResponse {
   status: (code: number) => NodeResponse;
