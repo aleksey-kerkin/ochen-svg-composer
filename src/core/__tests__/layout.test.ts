@@ -10,7 +10,12 @@ import type {
   Slot2D,
 } from '../../model/types.ts';
 import { mainGroupFill } from '../arrange.ts';
-import { axisBox, visibleFraction } from '../geometry.ts';
+import {
+  type Box,
+  axisBox,
+  intersection,
+  visibleFraction,
+} from '../geometry.ts';
 import {
   groupFillTarget,
   layout,
@@ -192,7 +197,7 @@ describe('layout', () => {
           },
           frame,
         );
-        expect(visible).toBeGreaterThanOrEqual(0.6);
+        expect(visible).toBeGreaterThanOrEqual(0.85);
       }
     }
   });
@@ -274,12 +279,12 @@ describe('layout', () => {
     }
   });
 
-  it('shrinks the group only until a lamp stays 60% visible', () => {
+  it('keeps backgrounds beside the group and scales the whole scene', () => {
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
+      const limit = Math.min(frame.w, frame.h);
       for (const templateId of TEMPLATE_IDS) {
         const template = templateById(templateId, format);
-        const fills: number[] = [];
         for (const size of ['S', 'L'] as const) {
           const scene = layoutScene(
             [
@@ -290,6 +295,11 @@ describe('layout', () => {
                 objectId: 'lamp',
                 role: 'background',
               }),
+              placed({
+                uid: 'flowers',
+                objectId: 'flowers',
+                role: 'background',
+              }),
             ],
             template,
             1,
@@ -298,21 +308,59 @@ describe('layout', () => {
           const mains = scene.objects.filter(
             (object) => object.role === 'main',
           );
-          const fill = mainGroupFill(mains, scene.scale, frame);
-          fills.push(fill);
-          expect(fill).toBeGreaterThan(0.58);
-          expect(fill).toBeLessThanOrEqual(groupFillTarget(size) + 0.03);
+          const mainUnion = unionOf(
+            mains.map((object) => axisBox(object, scene.scale)),
+          );
+          const fill = mainGroupFill(scene.objects, scene.scale, frame);
+          expect(fill).toBeGreaterThan(groupFillTarget(size) - 0.03);
+          expect(fill).toBeLessThan(groupFillTarget(size) + 0.03);
           for (const background of scene.objects) {
             if (background.role !== 'background') continue;
-            expect(
-              visibleFraction(axisBox(background, scene.scale), frame),
-            ).toBeGreaterThanOrEqual(0.6);
+            const box = axisBox(background, scene.scale);
+            expect(visibleFraction(box, frame)).toBeGreaterThanOrEqual(0.85);
+            expect(separation(box, mainUnion)).toBeLessThan(limit * 0.08);
+            for (const main of mains) {
+              expect(intersection(box, axisBox(main, scene.scale))).toBeNull();
+            }
+          }
+          for (const objectId of ['lamp', 'flowers']) {
+            const background = scene.objects.find(
+              (object) => object.objectId === objectId,
+            );
+            if (!background) throw new Error(objectId);
+            const box = axisBox(background, scene.scale);
+            const overlap =
+              Math.min(box.x + box.w, mainUnion.x + mainUnion.w) -
+              Math.max(box.x, mainUnion.x);
+            expect(overlap).toBeLessThan(box.w * 0.25);
+            expect(background.z).toBeLessThan(
+              Math.min(...mains.map((object) => object.z)),
+            );
           }
         }
-        const small = fills[0] ?? 0;
-        const large = fills[1] ?? 0;
-        expect(small).toBeLessThanOrEqual(large + 1e-6);
       }
     }
   });
 });
+
+function unionOf(boxes: Box[]): Box {
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const right = Math.max(...boxes.map((box) => box.x + box.w));
+  const bottom = Math.max(...boxes.map((box) => box.y + box.h));
+  return { x: left, y: top, w: right - left, h: bottom - top };
+}
+
+function separation(box: Box, other: Box): number {
+  const dx = Math.max(
+    other.x - (box.x + box.w),
+    box.x - (other.x + other.w),
+    0,
+  );
+  const dy = Math.max(
+    other.y - (box.y + box.h),
+    box.y - (other.y + other.h),
+    0,
+  );
+  return Math.hypot(dx, dy);
+}

@@ -511,6 +511,137 @@ function edgeSpots(
 }
 
 /**
+ * Sits each background beside the main group (or just behind it) with a
+ * small gap. Side objects — lamp, vase, headphones — only stand beside.
+ * The caller scales the whole scene afterwards, so these positions are
+ * relative to the mains, not to the frame corners.
+ */
+export function placeNearGroup(
+  backgrounds: PlacedObject[],
+  mains: PlacedObject[],
+  scale: number,
+): PlacedObject[] {
+  if (mains.length === 0) return backgrounds.map(clone);
+  const copies = backgrounds.map(clone);
+  const ordered = [...copies].sort(
+    (left, right) => areaOf(right, scale) - areaOf(left, scale),
+  );
+  const occupied = mains.map((object) => axisBox(object, scale));
+  let prefer: 'left' | 'right' = 'right';
+  for (const object of ordered) {
+    const size = renderedSize(object, scale);
+    const union = unionBox(occupied);
+    const gap = Math.max(GAP, Math.min(union.w, union.h) * 0.04);
+    const besideOnly = profile(object.objectId).anchor === 'side';
+    const spot = pickNearSpot(size, union, occupied, gap, besideOnly, prefer);
+    object.x = spot.x;
+    object.y = spot.y;
+    object.rotation = 0;
+    occupied.push({
+      x: spot.x - size.w / 2,
+      y: spot.y - size.h / 2,
+      w: size.w,
+      h: size.h,
+    });
+    prefer = prefer === 'right' ? 'left' : 'right';
+  }
+  return copies;
+}
+
+function pickNearSpot(
+  size: { w: number; h: number },
+  union: Box,
+  occupied: Box[],
+  gap: number,
+  besideOnly: boolean,
+  prefer: 'left' | 'right',
+): { x: number; y: number } {
+  for (const spot of besideSpots(size, union, gap, besideOnly, prefer)) {
+    const box = {
+      x: spot.x - size.w / 2,
+      y: spot.y - size.h / 2,
+      w: size.w,
+      h: size.h,
+    };
+    if (!overlaps(box, occupied, 2)) return spot;
+  }
+  const step = Math.max(12, Math.min(size.w, size.h) * 0.1);
+  let best: { x: number; y: number; score: number } | null = null;
+  const minX = union.x - size.w - gap * 3;
+  const maxX = union.x + union.w + size.w + gap * 3;
+  const minY = union.y - size.h - gap * 2;
+  const maxY = union.y + union.h + size.h * 0.15;
+  for (let x = minX; x <= maxX; x += step) {
+    for (let y = minY; y <= maxY; y += step) {
+      const box = {
+        x: x - size.w / 2,
+        y: y - size.h / 2,
+        w: size.w,
+        h: size.h,
+      };
+      if (overlaps(box, occupied, 2)) continue;
+      if (besideOnly && coversGroup(box, union)) continue;
+      const dx = Math.max(
+        union.x - (box.x + box.w),
+        box.x - (union.x + union.w),
+        0,
+      );
+      const dy = Math.max(
+        union.y - (box.y + box.h),
+        box.y - (union.y + union.h),
+        0,
+      );
+      const ground = Math.abs(box.y + box.h - (union.y + union.h));
+      const score = Math.hypot(dx, dy) + ground * 0.35;
+      if (!best || score < best.score) best = { x, y, score };
+    }
+  }
+  if (best) return best;
+  return {
+    x: union.x + union.w + gap + size.w / 2,
+    y: union.y + union.h - size.h / 2,
+  };
+}
+
+function coversGroup(box: Box, union: Box): boolean {
+  const overlap =
+    Math.min(box.x + box.w, union.x + union.w) - Math.max(box.x, union.x);
+  return overlap > box.w * 0.25;
+}
+
+function besideSpots(
+  size: { w: number; h: number },
+  union: Box,
+  gap: number,
+  besideOnly: boolean,
+  prefer: 'left' | 'right',
+): { x: number; y: number }[] {
+  const yGround = union.y + union.h - size.h / 2;
+  const step = Math.max(gap, Math.min(size.w, size.h) * 0.08);
+  const spots: { x: number; y: number }[] = [];
+  for (let ring = 0; ring < 4; ring += 1) {
+    const lift = ring * step * 0.35;
+    const right = {
+      x: union.x + union.w + gap + ring * step + size.w / 2,
+      y: yGround - lift,
+    };
+    const left = {
+      x: union.x - gap - ring * step - size.w / 2,
+      y: yGround - lift,
+    };
+    if (prefer === 'right') spots.push(right, left);
+    else spots.push(left, right);
+  }
+  if (!besideOnly) {
+    spots.push({
+      x: union.x + union.w / 2,
+      y: union.y - gap - size.h / 2,
+    });
+  }
+  return spots;
+}
+
+/**
  * Parks monochrome objects behind the mains. Most of each object stays
  * inside the frame; a light crop at the edge is preferred.
  */

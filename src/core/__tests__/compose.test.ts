@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { FORMATS } from '../../model/formats.ts';
+import { mainGroupFill } from '../arrange.ts';
 import { composePick, composePlacements } from '../compose.ts';
 import { templateById } from '../layout.ts';
 
@@ -15,7 +17,9 @@ describe('composePlacements', () => {
     expect(placed.scale).toBeLessThanOrEqual(
       templateById('offset', 'portrait').scale,
     );
-    expect(placed.scale).toBeGreaterThan(0.45);
+    expect(
+      mainGroupFill(placed.objects, placed.scale, FORMATS.portrait),
+    ).toBeGreaterThan(0.72);
     const mains = placed.objects.filter((object) => object.role === 'main');
     expect(mains.map((object) => object.objectId).sort()).toEqual([
       'flowers',

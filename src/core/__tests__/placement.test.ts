@@ -183,7 +183,7 @@ describe('placement geometry', () => {
       expect(object.z).toBeLessThan(Math.min(...mains.map((entry) => entry.z)));
       expect(
         visibleFraction(axisBox(object, placed.scale), frame),
-      ).toBeGreaterThanOrEqual(0.6);
+      ).toBeGreaterThanOrEqual(0.85);
     }
     expectMains(placed.objects, placed.scale);
   });

@@ -9,13 +9,12 @@ import type {
 import {
   anchorGroup,
   arrangeMains,
-  backgroundReadable,
-  mainGroupFill,
   orderByDepth,
   placeEdgeBackgrounds,
+  placeNearGroup,
   scaleMainsToFill,
 } from './arrange.ts';
-import { axisBox, crossesFrame, visibleFraction } from './geometry.ts';
+import { axisBox, crossesFrame } from './geometry.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
@@ -274,9 +273,10 @@ export function groupFillTarget(size: Size): number {
 }
 
 /**
- * Lays the scene out, then scales the main group uniformly so its limiting
- * side fills about 65% (S) or 75% (L) of the frame. Backgrounds are parked
- * nearer the edges afterwards and keep at least 60% of their box visible.
+ * Lays the scene out, then scales it uniformly so the limiting side fills
+ * about 65% (S) or 75% (L) of the frame. With no backgrounds that box is
+ * the main group. With backgrounds, they sit beside the group first and
+ * the box is the whole scene, so every backdrop stays inside the frame.
  */
 export function layoutScene(
   objects: PlacedObject[],
@@ -287,38 +287,20 @@ export function layoutScene(
   const frame = FORMATS[template.format];
   const target = groupFillTarget(size);
   const base = layout(objects, template, seed);
-  const mainRef = base.filter((object) => object.role === 'main');
+  const mains = base
+    .filter((object) => object.role === 'main')
+    .map((object) => ({ ...object }));
   const backgroundRef = base.filter((object) => object.role === 'background');
-  let scale = template.scale;
-  let placed = base;
-  let bestVisible = -1;
-  for (let step = 0; step <= 24; step += 1) {
-    const fill = Math.max(0.34, target - step * 0.02);
-    const mains = mainRef.map((object) => ({ ...object }));
-    const nextScale = scaleMainsToFill(mains, template.scale, frame, fill);
-    anchorGroup(mains, template, frame, nextScale);
-    const backgrounds = placeEdgeBackgrounds(
-      backgroundRef.map((object) => ({ ...object })),
-      mains,
-      { ...template, scale: nextScale },
-      () => 0.5,
-    );
-    const visible = backgrounds.reduce((min, object) => {
-      const box = axisBox(object, nextScale);
-      return Math.min(min, visibleFraction(box, frame));
-    }, 1);
-    const readable = backgrounds.every((object) =>
-      backgroundReadable(object, nextScale, frame, mains),
-    );
-    if (readable || visible > bestVisible) {
-      bestVisible = visible;
-      scale = nextScale;
-      placed = orderByDepth(backgrounds, mains, nextScale);
-    }
-    if (readable || backgrounds.length === 0) break;
-    if (mainGroupFill(mains, nextScale, frame) <= 0.35) break;
+  if (backgroundRef.length === 0) {
+    const scale = scaleMainsToFill(mains, template.scale, frame, target);
+    anchorGroup(mains, template, frame, scale);
+    return { scale, objects: orderByDepth([], mains, scale) };
   }
-  return { scale, objects: placed };
+  const backgrounds = placeNearGroup(backgroundRef, mains, template.scale);
+  const scene = [...mains, ...backgrounds];
+  const scale = scaleMainsToFill(scene, template.scale, frame, target);
+  anchorGroup(scene, template, frame, scale);
+  return { scale, objects: orderByDepth(backgrounds, mains, scale) };
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */

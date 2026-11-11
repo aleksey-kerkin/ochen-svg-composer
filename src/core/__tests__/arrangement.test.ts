@@ -149,7 +149,7 @@ function problems(
     if (background.z >= minMainZ)
       notes.push(`${background.objectId} is in front`);
     const visible = visibleFraction(axisBox(background, scale), frame);
-    if (visible < 0.6) {
+    if (visible < 0.85) {
       notes.push(`${background.objectId} shows ${Math.round(visible * 100)}%`);
     }
     for (const main of mains) {
