@@ -226,6 +226,19 @@ describe('editor', () => {
     ).not.toBe('true');
   });
 
+  it('«Плотно» sets templateId compact and presses the template button', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Телефон' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Плотно' }));
+    expect(useComposition.getState().templateId).toBe('compact');
+    expect(
+      screen
+        .getByRole('button', { name: 'Плотно' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true');
+  });
+
   it('«Под заголовком» keeps both main objects and sets templateId under-title', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Книга' }));
