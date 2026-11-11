@@ -26,7 +26,12 @@ if (
     `${outfile} should only import node builtins, got: ${specifiers.join(', ') || 'none'}`,
   );
 }
-if (!out.includes('nemotron-3.5-lightning-30b-a3b')) {
+if (
+  !out.includes('nemotron-3.5-lightning-30b-a3b') ||
+  !out.includes('nemotron-3-ultra-550b-a55b') ||
+  !out.includes('step-5-preview') ||
+  !out.includes('minimax-m3.1-flash')
+) {
   throw new Error(`${outfile} is missing the compose chain`);
 }
 if (!out.includes('/src/assets/library/L/main/book.svg')) {

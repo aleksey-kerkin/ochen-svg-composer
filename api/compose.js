@@ -1343,10 +1343,29 @@ function ensureMainPair(pick, text, items) {
     main: expandMains(pick.main, items, hints, pick.background)
   };
 }
+function stripThinking(value) {
+  const closed = value.replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, "").replace(/<think\b[^>]*>[\s\S]*?<\/redacted_thinking>/gi, "");
+  const open = closed.search(/<think\b[^>]*>/i);
+  return (open >= 0 ? closed.slice(0, open) : closed).trim();
+}
+function textOf(content) {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.map((part) => {
+    if (typeof part === "string") return part;
+    if (part && typeof part === "object" && "text" in part && typeof part.text === "string") {
+      return part.text;
+    }
+    return "";
+  }).join("");
+}
 function parseModelContent(content) {
-  if (typeof content !== "string") return null;
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content);
-  const raw = fenced?.[1] ?? content;
+  const text = typeof content === "string" ? content : textOf(content);
+  if (!text) return null;
+  const stripped = stripThinking(text);
+  if (!stripped) return null;
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(stripped);
+  const raw = fenced?.[1] ?? stripped;
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
   if (start < 0 || end <= start) return null;
@@ -1355,6 +1374,16 @@ function parseModelContent(content) {
   } catch {
     return null;
   }
+}
+function parseModelMessage(message) {
+  if (!message || typeof message !== "object")
+    return parseModelContent(message);
+  const record = message;
+  const fromContent = parseModelContent(record.content);
+  if (fromContent) return fromContent;
+  const reasoning = textOf(record.reasoning_content) || textOf(record.reasoning);
+  if (!reasoning) return null;
+  return parseModelContent(reasoning);
 }
 function finishPick(pick, source, model) {
   const scene = {
@@ -1370,13 +1399,44 @@ function finishPick(pick, source, model) {
 
 // src/server/composeScene.ts
 var NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-var PRIMARY_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
-var FALLBACK_MODEL = "z-ai/glm-5.3-flash";
-var MODEL_TIMEOUT_MS = 9e3;
+var DEFAULT_MODELS = [
+  "nvidia/nemotron-3-ultra-550b-a55b",
+  "nvidia/nemotron-3.5-lightning-30b-a3b",
+  "z-ai/glm-5.3-flash",
+  "minimaxai/minimax-m3.1-flash",
+  "stepfun-ai/step-5-preview"
+];
+var PRIMARY_MODEL = DEFAULT_MODELS[0];
+var FALLBACK_MODEL = DEFAULT_MODELS[1];
+var LIGHTNING_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
+var MODEL_TIMEOUT_MS = 4e3;
+var COMPOSE_DEADLINE_MS = 1e4;
+var MIN_ATTEMPT_MS = 250;
+var TIMEOUT_COOLDOWN_MS = 25e3;
+var RACE_WIDTH = 3;
+var ANSWER_TOKENS = 400;
+var REASONING_TOKENS = 1600;
 var FORMAT_LABEL = {
   landscape: "\u0433\u043E\u0440\u0438\u0437\u043E\u043D\u0442\u0430\u043B\u044C",
   square: "\u043A\u0432\u0430\u0434\u0440\u0430\u0442",
   portrait: "\u0432\u0435\u0440\u0442\u0438\u043A\u0430\u043B\u044C"
+};
+var cooledUntil = /* @__PURE__ */ new Map();
+function modelChain(override) {
+  const parsed = (override ?? "").split(",").map((part) => part.trim()).filter((part) => part.length > 0);
+  return parsed.length > 0 ? parsed : [...DEFAULT_MODELS];
+}
+var ModelTimeoutError = class extends Error {
+  constructor() {
+    super("model timeout");
+    this.name = "ModelTimeoutError";
+  }
+};
+var ModelCancelledError = class extends Error {
+  constructor() {
+    super("model cancelled");
+    this.name = "ModelCancelledError";
+  }
 };
 function catalog(items) {
   return items.map(
@@ -1401,11 +1461,52 @@ function tagsPick(text, items) {
   const picked = matchByKeywords(text, items);
   return finishPick(picked, "tags");
 }
-async function askModel(model, input, items, apiKey, fetchFn, timeoutMs) {
+function chainFor(deps) {
+  const explicit = deps.models?.map((model) => model.trim()).filter((model) => model.length > 0);
+  if (explicit && explicit.length > 0) return explicit;
+  return modelChain(process.env.NVIDIA_MODELS);
+}
+function modelsToTry(models, at) {
+  const ready = models.filter((model) => !cooling(model, at));
+  if (ready.length > 0) return ready;
+  return models.slice(0, 1);
+}
+function cooling(model, at) {
+  const until = cooledUntil.get(model);
+  if (until === void 0) return false;
+  if (until <= at) {
+    cooledUntil.delete(model);
+    return false;
+  }
+  return true;
+}
+function rememberTimeout(model, cooldownMs) {
+  cooledUntil.set(model, Date.now() + cooldownMs);
+}
+function isTimeout(error) {
+  if (!error || typeof error !== "object") return false;
+  const name = error.name;
+  return name === "ModelTimeoutError" || name === "TimeoutError" || name === "AbortError";
+}
+function tuneBody(model, body) {
+  if (model.toLowerCase().includes("minimax")) {
+    body.max_tokens = REASONING_TOKENS;
+    body.reasoning_effort = "none";
+    body.chat_template_kwargs = { thinking_mode: "disabled" };
+    return;
+  }
+  if (model === LIGHTNING_MODEL || model.toLowerCase().includes("glm")) {
+    body.chat_template_kwargs = { enable_thinking: false };
+  }
+  if (model.toLowerCase().includes("glm")) {
+    body.reasoning_effort = "none";
+  }
+}
+function completionBody(model, input, items) {
   const body = {
     model,
     temperature: 0.2,
-    max_tokens: 400,
+    max_tokens: ANSWER_TOKENS,
     messages: [
       { role: "system", content: systemPrompt(items) },
       {
@@ -1414,23 +1515,56 @@ async function askModel(model, input, items, apiKey, fetchFn, timeoutMs) {
       }
     ]
   };
-  if (model === PRIMARY_MODEL) {
-    body.chat_template_kwargs = { enable_thinking: false };
+  tuneBody(model, body);
+  return body;
+}
+function linkSignal(timeoutMs, parent) {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const controller = new AbortController();
+  const follow = (source) => {
+    if (source.aborted) {
+      if (!controller.signal.aborted) controller.abort(source.reason);
+      return;
+    }
+    source.addEventListener(
+      "abort",
+      () => {
+        if (!controller.signal.aborted) controller.abort(source.reason);
+      },
+      { once: true }
+    );
+  };
+  follow(timeoutSignal);
+  if (parent) follow(parent);
+  return {
+    signal: controller.signal,
+    timedOut: () => timeoutSignal.aborted,
+    cancelled: () => parent?.aborted === true && !timeoutSignal.aborted
+  };
+}
+async function askModel(model, input, items, apiKey, fetchFn, timeoutMs, parent) {
+  const gates = linkSignal(timeoutMs, parent);
+  let response;
+  try {
+    response = await fetchFn(NVIDIA_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(completionBody(model, input, items)),
+      signal: gates.signal
+    });
+  } catch (error) {
+    if (gates.cancelled()) throw new ModelCancelledError();
+    if (gates.timedOut() || isTimeout(error)) throw new ModelTimeoutError();
+    throw error;
   }
-  const response = await fetchFn(NVIDIA_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs)
-  });
   if (!response.ok) {
     throw new Error(`model status ${response.status}`);
   }
   const payload = await response.json();
-  const parsed = parseModelContent(payload.choices?.[0]?.message?.content);
+  const parsed = parseModelMessage(payload.choices?.[0]?.message);
   const ids = new Set(items.map((item) => item.objectId));
   const validated = parsed ? validatePick(parsed, ids) : null;
   if (!validated || validated.main.length === 0) {
@@ -1442,26 +1576,88 @@ async function askModel(model, input, items, apiKey, fetchFn, timeoutMs) {
     model
   );
 }
+function budgetFor(attempt) {
+  const remaining = attempt.deadlineAt - Date.now();
+  if (remaining < MIN_ATTEMPT_MS) return null;
+  return Math.max(1, Math.min(attempt.timeoutMs, remaining));
+}
+async function raceModels(models, attempt) {
+  const controllers = models.map(() => new AbortController());
+  const tasks = models.map((model, index) => {
+    const budget = budgetFor(attempt);
+    const signal = controllers[index]?.signal;
+    if (budget === null || !signal)
+      return Promise.reject(new Error("deadline"));
+    return askModel(
+      model,
+      attempt.input,
+      attempt.items,
+      attempt.apiKey,
+      attempt.fetchFn,
+      budget,
+      signal
+    ).then((pick) => {
+      controllers.forEach((controller, other) => {
+        if (other !== index) controller.abort();
+      });
+      return pick;
+    }).catch((error) => {
+      if (isTimeout(error)) rememberTimeout(model, attempt.cooldownMs);
+      throw error;
+    });
+  });
+  try {
+    return await Promise.any(tasks);
+  } finally {
+    for (const controller of controllers) controller.abort();
+  }
+}
+async function askNext(model, attempt) {
+  const budget = budgetFor(attempt);
+  if (budget === null) return null;
+  try {
+    return await askModel(
+      model,
+      attempt.input,
+      attempt.items,
+      attempt.apiKey,
+      attempt.fetchFn,
+      budget
+    );
+  } catch (error) {
+    if (isTimeout(error)) rememberTimeout(model, attempt.cooldownMs);
+    return null;
+  }
+}
 async function composeScene(input, deps = {}) {
   const items = deps.items ?? manifest_default.items;
   const text = input.text.trim();
   if (!text) return tagsPick(text, items);
   const apiKey = deps.apiKey?.trim();
   if (!apiKey) return tagsPick(text, items);
-  const fetchFn = deps.fetch ?? fetch;
   const timeoutMs = deps.timeoutMs ?? MODEL_TIMEOUT_MS;
-  for (const model of [PRIMARY_MODEL, FALLBACK_MODEL]) {
+  const deadlineAt = Date.now() + (deps.deadlineMs ?? COMPOSE_DEADLINE_MS);
+  const attempt = {
+    input: { ...input, text },
+    items,
+    apiKey,
+    fetchFn: deps.fetch ?? fetch,
+    timeoutMs,
+    deadlineAt,
+    cooldownMs: deps.cooldownMs ?? TIMEOUT_COOLDOWN_MS
+  };
+  const models = modelsToTry(chainFor(deps), Date.now());
+  const wave = models.slice(0, RACE_WIDTH);
+  const rest = models.slice(RACE_WIDTH);
+  if (wave.length > 0 && budgetFor(attempt) !== null) {
     try {
-      return await askModel(
-        model,
-        { ...input, text },
-        items,
-        apiKey,
-        fetchFn,
-        timeoutMs
-      );
+      return await raceModels(wave, attempt);
     } catch {
     }
+  }
+  for (const model of rest) {
+    const pick = await askNext(model, attempt);
+    if (pick) return pick;
   }
   return tagsPick(text, items);
 }
