@@ -117,13 +117,3 @@ export function faceOf(objectId: string, box: Box): Box {
     h: box.h * face.h,
   };
 }
-
-export function footprintOf(objectId: string, box: Box): Box {
-  const foot = profile(objectId).footprint;
-  return {
-    x: box.x + box.w * foot.x,
-    y: box.y + box.h * foot.y,
-    w: box.w * foot.w,
-    h: box.h * foot.h,
-  };
-}

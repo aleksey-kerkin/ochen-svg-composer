@@ -8,58 +8,60 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+function isDuplicateShortcut(event: KeyboardEvent): boolean {
+  return (
+    (event.key === 'd' || event.key === 'D') && (event.ctrlKey || event.metaKey)
+  );
+}
+
+function nudgeSelection(event: KeyboardEvent, uid: string): void {
+  const state = useComposition.getState();
+  const step = event.shiftKey ? 10 : 1;
+  switch (event.key) {
+    case 'Delete':
+    case 'Backspace':
+      state.remove(uid);
+      event.preventDefault();
+      break;
+    case '[':
+      state.sendBackward(uid);
+      break;
+    case ']':
+      state.bringForward(uid);
+      break;
+    case 'ArrowLeft':
+      state.move(uid, -step, 0);
+      event.preventDefault();
+      break;
+    case 'ArrowRight':
+      state.move(uid, step, 0);
+      event.preventDefault();
+      break;
+    case 'ArrowUp':
+      state.move(uid, 0, -step);
+      event.preventDefault();
+      break;
+    case 'ArrowDown':
+      state.move(uid, 0, step);
+      event.preventDefault();
+      break;
+    default:
+      break;
+  }
+}
+
 export function useEditorHotkeys(): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return;
-
       const state = useComposition.getState();
-      const { selectedUid } = state;
-
-      if (
-        (event.key === 'd' || event.key === 'D') &&
-        (event.ctrlKey || event.metaKey)
-      ) {
+      if (isDuplicateShortcut(event)) {
         event.preventDefault();
-        if (selectedUid) state.duplicate(selectedUid);
+        if (state.selectedUid) state.duplicate(state.selectedUid);
         return;
       }
-
-      if (!selectedUid) return;
-
-      const step = event.shiftKey ? 10 : 1;
-
-      switch (event.key) {
-        case 'Delete':
-        case 'Backspace':
-          state.remove(selectedUid);
-          event.preventDefault();
-          break;
-        case '[':
-          state.sendBackward(selectedUid);
-          break;
-        case ']':
-          state.bringForward(selectedUid);
-          break;
-        case 'ArrowLeft':
-          state.move(selectedUid, -step, 0);
-          event.preventDefault();
-          break;
-        case 'ArrowRight':
-          state.move(selectedUid, step, 0);
-          event.preventDefault();
-          break;
-        case 'ArrowUp':
-          state.move(selectedUid, 0, -step);
-          event.preventDefault();
-          break;
-        case 'ArrowDown':
-          state.move(selectedUid, 0, step);
-          event.preventDefault();
-          break;
-        default:
-          break;
-      }
+      if (!state.selectedUid) return;
+      nudgeSelection(event, state.selectedUid);
     };
 
     window.addEventListener('keydown', onKeyDown);

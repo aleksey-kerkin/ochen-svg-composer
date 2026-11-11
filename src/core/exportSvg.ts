@@ -1,5 +1,5 @@
 import { frameMarkup, recolorAsset, resolvePalette } from './recolor.ts';
-import { getAsset, scopeAsset } from '../library/registry.ts';
+import { getAsset, rewriteSvgIds, scopeAsset } from '../library/registry.ts';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS, coverPlacement, coverTransform } from '../model/formats.ts';
 import { renderScale } from '../model/scale.ts';
@@ -111,10 +111,6 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /** Every id in the file is ASCII, and clip/href references follow. */
 function asciiizeIds(markup: string): string {
   const rawIds = new Set<string>();
@@ -142,30 +138,7 @@ function asciiizeIds(markup: string): string {
     used.add(next);
     map.set(raw, next);
   }
-  const ordered = [...map.entries()].sort(
-    (left, right) => right[0].length - left[0].length,
-  );
-  let result = markup;
-  for (const [raw, next] of ordered) {
-    if (raw === next) continue;
-    const escaped = escapeRegExp(raw);
-    result = result.replace(
-      new RegExp(String.raw`(\bid\s*=\s*["'])${escaped}(["'])`, 'g'),
-      `$1${next}$2`,
-    );
-    result = result.replace(
-      new RegExp(String.raw`(url\(\s*["']?#)${escaped}(["']?\s*\))`, 'g'),
-      `$1${next}$2`,
-    );
-    result = result.replace(
-      new RegExp(
-        String.raw`(\b(?:xlink:)?href\s*=\s*["']#)${escaped}(["'])`,
-        'g',
-      ),
-      `$1${next}$2`,
-    );
-  }
-  return result;
+  return rewriteSvgIds(markup, [...map.entries()]);
 }
 
 /**

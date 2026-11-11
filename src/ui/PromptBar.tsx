@@ -1,14 +1,103 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
-import { useFold, useWideScreen } from './useWideScreen.ts';
 import manifest from '../library/manifest.json' with { type: 'json' };
-import type { Manifest } from '../model/types.ts';
+import type { Manifest, PlacedObject } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
+import { useFold, useWideScreen } from './useWideScreen.ts';
 
 const { items } = manifest as Manifest;
 
 const nameById = new Map(items.map((item) => [item.objectId, item.name.ru]));
 
 type Mode = 'names' | 'meaning';
+
+type Metaphor = { source: 'model' | 'tags'; reason: string };
+
+function labelFor(objectId: string): string {
+  return nameById.get(objectId) ?? objectId;
+}
+
+function ModeSwitch({
+  meaning,
+  onChange,
+}: {
+  meaning: boolean;
+  onChange: (mode: Mode) => void;
+}) {
+  return (
+    <div className="toolbar__group" role="group" aria-label="Режим сборки">
+      <button
+        type="button"
+        className="seg"
+        aria-pressed={!meaning}
+        onClick={() => onChange('names')}
+      >
+        Названия
+      </button>
+      <button
+        type="button"
+        className="seg"
+        aria-pressed={meaning}
+        onClick={() => onChange('meaning')}
+      >
+        Смысл
+      </button>
+    </div>
+  );
+}
+
+function PromptResults({
+  meaning,
+  matches,
+  unknown,
+  metaphor,
+  objects,
+}: {
+  meaning: boolean;
+  matches: { objectId: string; count: number }[];
+  unknown: string[];
+  metaphor?: Metaphor;
+  objects: PlacedObject[];
+}) {
+  const showNames = !meaning && (matches.length > 0 || unknown.length > 0);
+  if (!showNames && !(meaning && metaphor)) return null;
+  return (
+    <div className="prompt__results">
+      {!meaning && matches.length > 0 && (
+        <ul className="prompt__chips" aria-label="Распознанные объекты">
+          {matches.map((match) => (
+            <li key={match.objectId} className="prompt__chip">
+              {labelFor(match.objectId)}
+              {match.count > 1 ? ` × ${match.count}` : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+      {meaning && metaphor && (
+        <ul className="prompt__chips" aria-label="Подобранные объекты">
+          {objects.map((object) => (
+            <li key={object.uid} className="prompt__chip">
+              {labelFor(object.objectId)}
+              {object.role === 'background' ? ' · фон' : ''}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!meaning && unknown.length > 0 && (
+        <p className="prompt__unknown" role="status">
+          Не распознано: {unknown.join(', ')}
+        </p>
+      )}
+      {meaning && metaphor && (
+        <p className="prompt__source" role="status">
+          {metaphor.source === 'model' ? 'Собрала модель' : 'Собрано по тегам'}
+          {metaphor.reason.startsWith('По смыслу')
+            ? `. ${metaphor.reason}`
+            : ''}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function PromptBar() {
   const [text, setText] = useState('');
@@ -19,6 +108,9 @@ export function PromptBar() {
   const metaphor = useComposition((state) => state.metaphor);
   const metaphorPending = useComposition((state) => state.metaphorPending);
   const objects = useComposition((state) => state.objects);
+  const meaning = mode === 'meaning';
+  const wide = useWideScreen();
+  const [modeOpen, setModeOpen] = useFold(wide);
 
   function submit() {
     if (mode === 'names') composeNames(text);
@@ -37,12 +129,6 @@ export function PromptBar() {
     }
   }
 
-  const matches = nameQuery?.matches ?? [];
-  const unknown = nameQuery?.unknown ?? [];
-  const meaning = mode === 'meaning';
-  const wide = useWideScreen();
-  const [modeOpen, setModeOpen] = useFold(wide);
-
   return (
     <section
       className="prompt panel"
@@ -55,24 +141,7 @@ export function PromptBar() {
         onToggle={(event) => setModeOpen(event.currentTarget.open)}
       >
         <summary>Режим</summary>
-        <div className="toolbar__group" role="group" aria-label="Режим сборки">
-          <button
-            type="button"
-            className="seg"
-            aria-pressed={!meaning}
-            onClick={() => setMode('names')}
-          >
-            Названия
-          </button>
-          <button
-            type="button"
-            className="seg"
-            aria-pressed={meaning}
-            onClick={() => setMode('meaning')}
-          >
-            Смысл
-          </button>
-        </div>
+        <ModeSwitch meaning={meaning} onChange={setMode} />
       </details>
       <form className="prompt__form" onSubmit={onSubmit}>
         <input
@@ -93,52 +162,13 @@ export function PromptBar() {
           {metaphorPending ? 'Подбираем…' : 'Собрать'}
         </button>
       </form>
-      {((!meaning && (matches.length > 0 || unknown.length > 0)) ||
-        (meaning && metaphor)) && (
-        <div className="prompt__results">
-          {!meaning && matches.length > 0 && (
-            <ul className="prompt__chips" aria-label="Распознанные объекты">
-              {matches.map((match) => {
-                const label = nameById.get(match.objectId) ?? match.objectId;
-                return (
-                  <li key={match.objectId} className="prompt__chip">
-                    {label}
-                    {match.count > 1 ? ` × ${match.count}` : ''}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {meaning && metaphor && (
-            <ul className="prompt__chips" aria-label="Подобранные объекты">
-              {objects.map((object) => {
-                const label = nameById.get(object.objectId) ?? object.objectId;
-                return (
-                  <li key={object.uid} className="prompt__chip">
-                    {label}
-                    {object.role === 'background' ? ' · фон' : ''}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          {!meaning && unknown.length > 0 && (
-            <p className="prompt__unknown" role="status">
-              Не распознано: {unknown.join(', ')}
-            </p>
-          )}
-          {meaning && metaphor && (
-            <p className="prompt__source" role="status">
-              {metaphor.source === 'model'
-                ? 'Собрала модель'
-                : 'Собрано по тегам'}
-              {metaphor.reason.startsWith('По смыслу')
-                ? `. ${metaphor.reason}`
-                : ''}
-            </p>
-          )}
-        </div>
-      )}
+      <PromptResults
+        meaning={meaning}
+        matches={nameQuery?.matches ?? []}
+        unknown={nameQuery?.unknown ?? []}
+        metaphor={metaphor}
+        objects={objects}
+      />
     </section>
   );
 }
