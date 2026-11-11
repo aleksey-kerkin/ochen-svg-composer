@@ -22,8 +22,9 @@ export function keywordScene(text: string): ScenePick {
 export async function requestMetaphor(
   text: string,
   format: FormatId,
+  endpoint = '/api/compose',
 ): Promise<ScenePick> {
-  const response = await fetch('/api/compose', {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, format }),
