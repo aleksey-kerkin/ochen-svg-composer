@@ -11,8 +11,10 @@ import {
   arrangeMains,
   orderByDepth,
   placeEdgeBackgrounds,
-  placeNearGroup,
+  groupAspect,
+  keepReadable,
   scaleMainsToFill,
+  seatBackgrounds,
 } from './arrange.ts';
 import { axisBox, crossesFrame } from './geometry.ts';
 
@@ -267,16 +269,18 @@ export interface LaidOutScene {
   objects: PlacedObject[];
 }
 
-/** S sits at the low end of the group fill, L at the high end. */
+/**
+ * L is a close-up: the main group covers about the whole limiting side and
+ * may bleed. S stays a step smaller, still most of that side.
+ */
 export function groupFillTarget(size: Size): number {
-  return size === 'S' ? 0.65 : 0.75;
+  return size === 'S' ? 0.85 : 1;
 }
 
 /**
- * Lays the scene out, then scales it uniformly so the limiting side fills
- * about 65% (S) or 75% (L) of the frame. With no backgrounds that box is
- * the main group. With backgrounds, they sit beside the group first and
- * the box is the whole scene, so every backdrop stays inside the frame.
+ * Scales the main group so its limiting side is about 85% (S) or 100% (L)
+ * of the frame, which may bleed. Backgrounds then sit on the isometric
+ * diagonal beside that group and may crop, but not below half their box.
  */
 export function layoutScene(
   objects: PlacedObject[],
@@ -291,15 +295,17 @@ export function layoutScene(
     .filter((object) => object.role === 'main')
     .map((object) => ({ ...object }));
   const backgroundRef = base.filter((object) => object.role === 'background');
-  if (backgroundRef.length === 0) {
-    const scale = scaleMainsToFill(mains, template.scale, frame, target);
-    anchorGroup(mains, template, frame, scale);
-    return { scale, objects: orderByDepth([], mains, scale) };
-  }
-  const backgrounds = placeNearGroup(backgroundRef, mains, template.scale);
+  const backgrounds = seatBackgrounds(
+    backgroundRef,
+    mains,
+    template.scale,
+    frame,
+    groupAspect(template, frame),
+  );
   const scene = [...mains, ...backgrounds];
   const scale = scaleMainsToFill(scene, template.scale, frame, target);
   anchorGroup(scene, template, frame, scale);
+  keepReadable(scene, scale, frame, template);
   return { scale, objects: orderByDepth(backgrounds, mains, scale) };
 }
 

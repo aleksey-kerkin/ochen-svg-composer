@@ -16,12 +16,7 @@ import {
   intersection,
   visibleFraction,
 } from '../geometry.ts';
-import {
-  groupFillTarget,
-  layout,
-  layoutScene,
-  templateById,
-} from '../layout.ts';
+import { layout, layoutScene, templateById } from '../layout.ts';
 
 const library = manifest as Manifest;
 const TEMPLATE_IDS = ['under-title', 'offset', 'compact'] as const;
@@ -164,19 +159,9 @@ describe('layout', () => {
       );
       expect(backgrounds.length).toBeGreaterThan(0);
       for (const object of mains) {
-        const item = library.items.find(
-          (entry) => entry.objectId === object.objectId,
-        );
-        const asset = item?.assets.find(
-          (entry) => entry.size === 'L' && entry.role === 'main',
-        );
-        if (!asset) throw new Error(object.objectId);
-        const halfW = (asset.svgSize.w * scene.scale) / 2;
-        const halfH = (asset.svgSize.h * scene.scale) / 2;
-        expect(object.x - halfW).toBeGreaterThanOrEqual(-1);
-        expect(object.y - halfH).toBeGreaterThanOrEqual(-1);
-        expect(object.x + halfW).toBeLessThanOrEqual(frame.w + 1);
-        expect(object.y + halfH).toBeLessThanOrEqual(frame.h + 1);
+        expect(
+          visibleFraction(axisBox(object, scene.scale), frame),
+        ).toBeGreaterThanOrEqual(0.7);
       }
       for (const object of backgrounds) {
         const item = library.items.find(
@@ -197,7 +182,7 @@ describe('layout', () => {
           },
           frame,
         );
-        expect(visible).toBeGreaterThanOrEqual(0.85);
+        expect(visible).toBeGreaterThanOrEqual(0.5);
       }
     }
   });
@@ -253,7 +238,7 @@ describe('layout', () => {
     }
   });
 
-  it('scales the main group to 65% at S and 75% at L', () => {
+  it('scales the main group to 80-90% at S and 90-110% at L', () => {
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
       for (const templateId of TEMPLATE_IDS) {
@@ -272,8 +257,9 @@ describe('layout', () => {
             (object) => object.role === 'main',
           );
           const fill = mainGroupFill(mains, scene.scale, frame);
-          expect(fill).toBeGreaterThan(groupFillTarget(size) - 0.03);
-          expect(fill).toBeLessThan(groupFillTarget(size) + 0.03);
+          const [low, high] = size === 'S' ? [0.8, 0.9] : [0.9, 1.1];
+          expect(fill).toBeGreaterThanOrEqual(low - 0.02);
+          expect(fill).toBeLessThanOrEqual(high + 0.02);
         }
       }
     }
@@ -312,31 +298,35 @@ describe('layout', () => {
             mains.map((object) => axisBox(object, scene.scale)),
           );
           const fill = mainGroupFill(scene.objects, scene.scale, frame);
-          expect(fill).toBeGreaterThan(groupFillTarget(size) - 0.03);
-          expect(fill).toBeLessThan(groupFillTarget(size) + 0.03);
+          const [low, high] = size === 'S' ? [0.8, 0.9] : [0.9, 1.1];
+          expect(fill).toBeGreaterThanOrEqual(low - 0.02);
+          expect(fill).toBeLessThanOrEqual(high + 0.02);
+          const hero = mains.reduce((best, object) =>
+            axisBox(object, scene.scale).w * axisBox(object, scene.scale).h >
+            axisBox(best, scene.scale).w * axisBox(best, scene.scale).h
+              ? object
+              : best,
+          );
+          expect(
+            visibleFraction(axisBox(hero, scene.scale), frame),
+          ).toBeGreaterThanOrEqual(0.7);
+          const centers: number[] = [];
           for (const background of scene.objects) {
             if (background.role !== 'background') continue;
             const box = axisBox(background, scene.scale);
-            expect(visibleFraction(box, frame)).toBeGreaterThanOrEqual(0.85);
-            expect(separation(box, mainUnion)).toBeLessThan(limit * 0.08);
+            expect(visibleFraction(box, frame)).toBeGreaterThanOrEqual(0.5);
+            expect(separation(box, mainUnion)).toBeLessThan(limit * 0.22);
+            centers.push(box.y + box.h / 2);
             for (const main of mains) {
               expect(intersection(box, axisBox(main, scene.scale))).toBeNull();
             }
-          }
-          for (const objectId of ['lamp', 'flowers']) {
-            const background = scene.objects.find(
-              (object) => object.objectId === objectId,
-            );
-            if (!background) throw new Error(objectId);
-            const box = axisBox(background, scene.scale);
-            const overlap =
-              Math.min(box.x + box.w, mainUnion.x + mainUnion.w) -
-              Math.max(box.x, mainUnion.x);
-            expect(overlap).toBeLessThan(box.w * 0.25);
             expect(background.z).toBeLessThan(
               Math.min(...mains.map((object) => object.z)),
             );
           }
+          const highCenter = Math.max(...centers);
+          const lowCenter = Math.min(...centers);
+          expect(highCenter - lowCenter).toBeGreaterThan(frame.h * 0.12);
         }
       }
     }

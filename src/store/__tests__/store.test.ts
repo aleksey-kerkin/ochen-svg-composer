@@ -193,7 +193,7 @@ describe('composition reducer', () => {
     });
     const next = reduceComposition(turned, { type: 'setSize', size: 'S' });
     expect(next.size).toBe('S');
-    expect(next.scale).toBeCloseTo(turned.scale * (0.65 / 0.75), 5);
+    expect(next.scale).toBeCloseTo(turned.scale * (0.85 / 1), 5);
     expect(byUid(next, uid).x).toBe(byUid(turned, uid).x);
     expect(byUid(next, uid).y).toBe(byUid(turned, uid).y);
     expect(byUid(next, uid).rotation).toBe(20);
@@ -241,9 +241,6 @@ describe('composition reducer', () => {
       state.seed,
     );
     expect(next.scale).toBeCloseTo(scene.scale);
-    expect(next.scale).toBeLessThanOrEqual(
-      templateById('offset', 'landscape').scale + 0.0001,
-    );
     expect(next.scale).toBeGreaterThan(0.2);
     expect(
       next.objects
@@ -284,9 +281,6 @@ describe('composition reducer', () => {
     });
     expect(stretched).toBe(false);
     expect(next.scale).toBeCloseTo(scene.scale);
-    expect(next.scale).toBeLessThanOrEqual(
-      templateById('offset', 'portrait').scale + 0.0001,
-    );
   });
 
   it('keeps every main and the selection when the template has fewer slots', () => {

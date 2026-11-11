@@ -139,7 +139,7 @@ describe('compact layout', () => {
             axisBox(background, scene.scale),
             frame,
           );
-          if (visible < 0.85) {
+          if (visible < 0.5) {
             failures.push(
               `${format} ${ids.join('+')} ${background.objectId} ${visible.toFixed(2)}`,
             );
@@ -236,7 +236,7 @@ describe('compact layout', () => {
         const box = axisBox(background, named.scale);
         const visible = visibleFraction(box, frame);
         if (
-          visible < 0.85 ||
+          visible < 0.5 ||
           !centerClear(background, { w: box.w, h: box.h }, frame)
         ) {
           failures.push(
@@ -261,7 +261,7 @@ describe('compact layout', () => {
         const box = axisBox(lamp, scene.scale);
         const visible = visibleFraction(box, frame);
         if (
-          visible < 0.85 ||
+          visible < 0.5 ||
           !centerClear(lamp, { w: box.w, h: box.h }, frame)
         ) {
           failures.push(

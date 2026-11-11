@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { FORMATS } from '../../model/formats.ts';
 import { mainGroupFill } from '../arrange.ts';
 import { composePick, composePlacements } from '../compose.ts';
-import { templateById } from '../layout.ts';
 
 describe('composePlacements', () => {
   it('lays two objects on the active template in the current format', () => {
@@ -14,12 +13,9 @@ describe('composePlacements', () => {
       { format: 'portrait', templateId: 'offset', seed: 1 },
     );
     expect(placed.templateId).toBe('offset');
-    expect(placed.scale).toBeLessThanOrEqual(
-      templateById('offset', 'portrait').scale,
-    );
     expect(
       mainGroupFill(placed.objects, placed.scale, FORMATS.portrait),
-    ).toBeGreaterThan(0.72);
+    ).toBeGreaterThan(0.8);
     const mains = placed.objects.filter((object) => object.role === 'main');
     expect(mains.map((object) => object.objectId).sort()).toEqual([
       'flowers',
