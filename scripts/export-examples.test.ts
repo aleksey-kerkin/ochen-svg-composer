@@ -32,8 +32,8 @@ const examples: {
     paletteId: 'peach',
   },
   {
-    slug: 'office-portrait-teal',
-    text: 'работа в офисе',
+    slug: 'dokumenty-portrait-teal',
+    text: 'работа с документами',
     format: 'portrait',
     paletteId: 'teal',
   },
@@ -71,7 +71,13 @@ describe('example compositions', () => {
     'writes exported SVG from the live model',
     async () => {
       mkdirSync('examples', { recursive: true });
-      for (const example of examples) {
+      // EXAMPLE_SLUG refreshes one scene and leaves the other files alone.
+      const only = process.env.EXAMPLE_SLUG;
+      const batch = only
+        ? examples.filter((example) => example.slug === only)
+        : examples;
+      if (batch.length === 0) throw new Error(`unknown example ${only}`);
+      for (const example of batch) {
         const pick = await livePick(example.text, example.format);
         const placed = composePick(pick, { format: example.format, seed: 1 });
         const composition: Composition = {
