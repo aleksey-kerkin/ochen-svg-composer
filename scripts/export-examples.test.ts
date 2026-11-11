@@ -1,9 +1,11 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { Resvg } from '@resvg/resvg-js';
 import { describe, it } from 'vitest';
 import { composeScene } from '../src/server/composeScene.ts';
 import { composePick } from '../src/core/compose.ts';
 import { exportSvg } from '../src/core/exportSvg.ts';
 import { resolvePalette } from '../src/core/recolor.ts';
+import { FORMATS } from '../src/model/formats.ts';
 import type { Composition, FormatId } from '../src/model/types.ts';
 
 const examples: {
@@ -64,7 +66,13 @@ describe('example compositions', () => {
           composition,
           resolvePalette(example.paletteId, []),
         );
+        const png = new Resvg(markup, {
+          fitTo: { mode: 'width', value: FORMATS[example.format].w },
+        })
+          .render()
+          .asPng();
         writeFileSync(`examples/${example.slug}.svg`, markup);
+        writeFileSync(`examples/${example.slug}.png`, png);
         console.log(
           example.slug,
           pick.main.join('+'),
