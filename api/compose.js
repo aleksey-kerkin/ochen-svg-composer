@@ -1400,18 +1400,20 @@ function finishPick(pick, source, model) {
 // src/server/composeScene.ts
 var NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 var DEFAULT_MODELS = [
+  "nvidia/nemotron-3-ultra-550b-a55b",
   "nvidia/nemotron-3.5-lightning-30b-a3b",
   "z-ai/glm-5.3-flash",
-  "nvidia/nemotron-3-ultra-550b-a55b",
-  "stepfun-ai/step-5-preview",
-  "minimaxai/minimax-m3.1-flash"
+  "minimaxai/minimax-m3.1-flash",
+  "stepfun-ai/step-5-preview"
 ];
 var PRIMARY_MODEL = DEFAULT_MODELS[0];
 var FALLBACK_MODEL = DEFAULT_MODELS[1];
+var LIGHTNING_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
 var MODEL_TIMEOUT_MS = 4e3;
 var COMPOSE_DEADLINE_MS = 1e4;
 var MIN_ATTEMPT_MS = 250;
-var TIMEOUT_COOLDOWN_MS = 6e4;
+var TIMEOUT_COOLDOWN_MS = 25e3;
+var RACE_WIDTH = 3;
 var ANSWER_TOKENS = 400;
 var REASONING_TOKENS = 1600;
 var FORMAT_LABEL = {
@@ -1428,6 +1430,12 @@ var ModelTimeoutError = class extends Error {
   constructor() {
     super("model timeout");
     this.name = "ModelTimeoutError";
+  }
+};
+var ModelCancelledError = class extends Error {
+  constructor() {
+    super("model cancelled");
+    this.name = "ModelCancelledError";
   }
 };
 function catalog(items) {
@@ -1458,6 +1466,11 @@ function chainFor(deps) {
   if (explicit && explicit.length > 0) return explicit;
   return modelChain(process.env.NVIDIA_MODELS);
 }
+function modelsToTry(models, at) {
+  const ready = models.filter((model) => !cooling(model, at));
+  if (ready.length > 0) return ready;
+  return models.slice(0, 1);
+}
 function cooling(model, at) {
   const until = cooledUntil.get(model);
   if (until === void 0) return false;
@@ -1482,7 +1495,7 @@ function tuneBody(model, body) {
     body.chat_template_kwargs = { thinking_mode: "disabled" };
     return;
   }
-  if (model === PRIMARY_MODEL || model.toLowerCase().includes("glm")) {
+  if (model === LIGHTNING_MODEL || model.toLowerCase().includes("glm")) {
     body.chat_template_kwargs = { enable_thinking: false };
   }
   if (model.toLowerCase().includes("glm")) {
@@ -1505,8 +1518,32 @@ function completionBody(model, input, items) {
   tuneBody(model, body);
   return body;
 }
-async function askModel(model, input, items, apiKey, fetchFn, timeoutMs) {
-  const signal = AbortSignal.timeout(timeoutMs);
+function linkSignal(timeoutMs, parent) {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const controller = new AbortController();
+  const follow = (source) => {
+    if (source.aborted) {
+      if (!controller.signal.aborted) controller.abort(source.reason);
+      return;
+    }
+    source.addEventListener(
+      "abort",
+      () => {
+        if (!controller.signal.aborted) controller.abort(source.reason);
+      },
+      { once: true }
+    );
+  };
+  follow(timeoutSignal);
+  if (parent) follow(parent);
+  return {
+    signal: controller.signal,
+    timedOut: () => timeoutSignal.aborted,
+    cancelled: () => parent?.aborted === true && !timeoutSignal.aborted
+  };
+}
+async function askModel(model, input, items, apiKey, fetchFn, timeoutMs, parent) {
+  const gates = linkSignal(timeoutMs, parent);
   let response;
   try {
     response = await fetchFn(NVIDIA_URL, {
@@ -1516,10 +1553,11 @@ async function askModel(model, input, items, apiKey, fetchFn, timeoutMs) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(completionBody(model, input, items)),
-      signal
+      signal: gates.signal
     });
   } catch (error) {
-    if (signal.aborted || isTimeout(error)) throw new ModelTimeoutError();
+    if (gates.cancelled()) throw new ModelCancelledError();
+    if (gates.timedOut() || isTimeout(error)) throw new ModelTimeoutError();
     throw error;
   }
   if (!response.ok) {
@@ -1538,34 +1576,88 @@ async function askModel(model, input, items, apiKey, fetchFn, timeoutMs) {
     model
   );
 }
+function budgetFor(attempt) {
+  const remaining = attempt.deadlineAt - Date.now();
+  if (remaining < MIN_ATTEMPT_MS) return null;
+  return Math.max(1, Math.min(attempt.timeoutMs, remaining));
+}
+async function raceModels(models, attempt) {
+  const controllers = models.map(() => new AbortController());
+  const tasks = models.map((model, index) => {
+    const budget = budgetFor(attempt);
+    const signal = controllers[index]?.signal;
+    if (budget === null || !signal)
+      return Promise.reject(new Error("deadline"));
+    return askModel(
+      model,
+      attempt.input,
+      attempt.items,
+      attempt.apiKey,
+      attempt.fetchFn,
+      budget,
+      signal
+    ).then((pick) => {
+      controllers.forEach((controller, other) => {
+        if (other !== index) controller.abort();
+      });
+      return pick;
+    }).catch((error) => {
+      if (isTimeout(error)) rememberTimeout(model, attempt.cooldownMs);
+      throw error;
+    });
+  });
+  try {
+    return await Promise.any(tasks);
+  } finally {
+    for (const controller of controllers) controller.abort();
+  }
+}
+async function askNext(model, attempt) {
+  const budget = budgetFor(attempt);
+  if (budget === null) return null;
+  try {
+    return await askModel(
+      model,
+      attempt.input,
+      attempt.items,
+      attempt.apiKey,
+      attempt.fetchFn,
+      budget
+    );
+  } catch (error) {
+    if (isTimeout(error)) rememberTimeout(model, attempt.cooldownMs);
+    return null;
+  }
+}
 async function composeScene(input, deps = {}) {
   const items = deps.items ?? manifest_default.items;
   const text = input.text.trim();
   if (!text) return tagsPick(text, items);
   const apiKey = deps.apiKey?.trim();
   if (!apiKey) return tagsPick(text, items);
-  const fetchFn = deps.fetch ?? fetch;
   const timeoutMs = deps.timeoutMs ?? MODEL_TIMEOUT_MS;
-  const deadlineMs = deps.deadlineMs ?? COMPOSE_DEADLINE_MS;
-  const cooldownMs = deps.cooldownMs ?? TIMEOUT_COOLDOWN_MS;
-  const deadlineAt = Date.now() + deadlineMs;
-  for (const model of chainFor({ ...deps })) {
-    const remaining = deadlineAt - Date.now();
-    if (remaining < MIN_ATTEMPT_MS) break;
-    if (cooling(model, Date.now())) continue;
-    const attempt = Math.max(1, Math.min(timeoutMs, remaining));
+  const deadlineAt = Date.now() + (deps.deadlineMs ?? COMPOSE_DEADLINE_MS);
+  const attempt = {
+    input: { ...input, text },
+    items,
+    apiKey,
+    fetchFn: deps.fetch ?? fetch,
+    timeoutMs,
+    deadlineAt,
+    cooldownMs: deps.cooldownMs ?? TIMEOUT_COOLDOWN_MS
+  };
+  const models = modelsToTry(chainFor(deps), Date.now());
+  const wave = models.slice(0, RACE_WIDTH);
+  const rest = models.slice(RACE_WIDTH);
+  if (wave.length > 0 && budgetFor(attempt) !== null) {
     try {
-      return await askModel(
-        model,
-        { ...input, text },
-        items,
-        apiKey,
-        fetchFn,
-        attempt
-      );
-    } catch (error) {
-      if (isTimeout(error)) rememberTimeout(model, cooldownMs);
+      return await raceModels(wave, attempt);
+    } catch {
     }
+  }
+  for (const model of rest) {
+    const pick = await askNext(model, attempt);
+    if (pick) return pick;
   }
   return tagsPick(text, items);
 }

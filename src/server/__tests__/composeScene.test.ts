@@ -138,19 +138,27 @@ describe('composeScene', () => {
       template: 'under-title',
     });
     expect(JSON.stringify(result)).not.toContain(secret);
-    const body = bodies[0] as {
+    const typed = bodies as {
       model: string;
+      reasoning_effort?: string;
       chat_template_kwargs?: { enable_thinking?: boolean };
       response_format?: unknown;
       messages: { content: string }[];
-    };
-    expect(body.model).toBe(PRIMARY_MODEL);
-    expect(body.chat_template_kwargs).toEqual({ enable_thinking: false });
-    expect(body.response_format).toBeUndefined();
-    expect(body.messages[0]?.content).toContain('учёба');
-    expect(body.messages[0]?.content).toContain('book');
-    expect(body.messages[0]?.content).toContain('от 2 до 4');
-    expect(body.messages[0]?.content).toContain('wallet');
+    }[];
+    const ultra = typed.find((body) => body.model === PRIMARY_MODEL);
+    const lightning = typed.find((body) => body.model === FALLBACK_MODEL);
+    expect(ultra?.model).toBe(PRIMARY_MODEL);
+    expect(ultra?.chat_template_kwargs).toBeUndefined();
+    expect(ultra?.response_format).toBeUndefined();
+    expect(lightning?.chat_template_kwargs).toEqual({
+      enable_thinking: false,
+    });
+    expect(lightning?.reasoning_effort).toBeUndefined();
+    if (!ultra) throw new Error('missing ultra request');
+    expect(ultra.messages[0]?.content).toContain('учёба');
+    expect(ultra.messages[0]?.content).toContain('book');
+    expect(ultra.messages[0]?.content).toContain('от 2 до 4');
+    expect(ultra.messages[0]?.content).toContain('wallet');
   });
 
   it('tries the fallback model after a 429 and after a timeout', async () => {
@@ -175,7 +183,7 @@ describe('composeScene', () => {
         },
       },
     );
-    expect(seen).toEqual([PRIMARY_MODEL, FALLBACK_MODEL]);
+    expect(seen).toEqual([...DEFAULT_MODELS.slice(0, 3)]);
     expect(rateLimited.model).toBe(FALLBACK_MODEL);
     expect(rateLimited.main).toEqual(['pen', 'book']);
 
@@ -305,17 +313,17 @@ describe('composeScene', () => {
       {
         apiKey: secret,
         items,
-        models: ['slow/a', 'slow/b', 'slow/c'],
+        models: ['slow/a', 'slow/b', 'slow/c', 'slow/d'],
         timeoutMs: 400,
         deadlineMs: 1_000,
         fetch: (_url, init) => {
           seen.push(modelOf(init));
-          clock += 800;
+          if (seen.length >= 3) clock += 2_000;
           return Promise.reject(timeoutError());
         },
       },
     );
-    expect(seen).toEqual(['slow/a']);
+    expect(seen).toEqual(['slow/a', 'slow/b', 'slow/c']);
     expect(result.source).toBe('tags');
     expect(result.main).toEqual(['book', 'pen']);
     expect(result.model).toBeUndefined();
@@ -384,7 +392,7 @@ describe('composeScene', () => {
   });
 
   it('asks MiniMax with reasoning disabled and a larger token budget', async () => {
-    const minimax = DEFAULT_MODELS[4];
+    const minimax = 'minimaxai/minimax-m3.1-flash';
     const bodies: {
       max_tokens?: number;
       reasoning_effort?: string;
@@ -431,7 +439,7 @@ describe('composeScene', () => {
       {
         apiKey: secret,
         items,
-        models: [FALLBACK_MODEL],
+        models: ['z-ai/glm-5.3-flash'],
         fetch: (_url, init) => {
           bodies.push(JSON.parse(String(init?.body)));
           return Promise.resolve(
@@ -442,7 +450,7 @@ describe('composeScene', () => {
         },
       },
     );
-    expect(bodies[0]?.model).toBe(FALLBACK_MODEL);
+    expect(bodies[0]?.model).toBe('z-ai/glm-5.3-flash');
     expect(bodies[0]?.chat_template_kwargs).toEqual({ enable_thinking: false });
     expect(bodies[0]?.reasoning_effort).toBe('none');
   });
@@ -475,5 +483,119 @@ describe('composeScene', () => {
       model: 'custom/two',
       main: ['lamp', 'folder'],
     });
+  });
+
+  it('keeps the first valid JSON from the parallel wave and cancels the rest', async () => {
+    let slowAborted = false;
+    const pick =
+      '{"main":["book"],"background":[],"template":"compact","reason":"ok"}';
+    const raced = await composeScene(
+      { text: 'учёба', format: 'square' },
+      {
+        apiKey: secret,
+        items,
+        models: ['slow/one', 'fast/two', 'slow/three'],
+        timeoutMs: 5_000,
+        fetch: (_url, init) => {
+          const model = modelOf(init);
+          if (model === 'fast/two') return Promise.resolve(jsonResponse(pick));
+          return new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => {
+              slowAborted = true;
+              reject(new Error('aborted'));
+            });
+          });
+        },
+      },
+    );
+    expect(raced).toMatchObject({ source: 'model', model: 'fast/two' });
+    expect(slowAborted).toBe(true);
+
+    const seen: string[] = [];
+    await composeScene(
+      { text: 'учёба', format: 'square' },
+      {
+        apiKey: secret,
+        items,
+        models: ['slow/one', 'fast/two'],
+        fetch: (_url, init) => {
+          seen.push(modelOf(init));
+          return Promise.resolve(jsonResponse(pick));
+        },
+      },
+    );
+    expect(seen[0]).toBe('slow/one');
+  });
+
+  it('tries the models after the parallel wave', async () => {
+    const seen: string[] = [];
+    const result = await composeScene(
+      { text: 'учёба', format: 'landscape' },
+      {
+        apiKey: secret,
+        items,
+        models: ['bad/a', 'bad/b', 'bad/c', 'good/d'],
+        fetch: (_url, init) => {
+          const model = modelOf(init);
+          seen.push(model);
+          if (model === 'good/d') {
+            return Promise.resolve(
+              jsonResponse(
+                '{"main":["pen"],"background":[],"template":"compact","reason":"ручка"}',
+              ),
+            );
+          }
+          return Promise.resolve(new Response('nope', { status: 500 }));
+        },
+      },
+    );
+    expect(seen).toEqual(['bad/a', 'bad/b', 'bad/c', 'good/d']);
+    expect(result).toMatchObject({ source: 'model', model: 'good/d' });
+  });
+
+  it('still tries the first model when every model is cooling', async () => {
+    const clock = 80_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => clock);
+    const seen: string[] = [];
+    let cooled = true;
+    const fetch = (_url: string | URL | Request, init?: RequestInit) => {
+      const model = modelOf(init);
+      seen.push(model);
+      if (cooled) return Promise.reject(timeoutError());
+      return Promise.resolve(
+        jsonResponse(
+          '{"main":["book"],"background":[],"template":"compact","reason":"книга"}',
+        ),
+      );
+    };
+    const missed = await composeScene(
+      { text: 'учёба', format: 'square' },
+      {
+        apiKey: secret,
+        items,
+        models: ['only/a', 'only/b'],
+        deadlineMs: 30_000,
+        cooldownMs: 5_000,
+        fetch,
+      },
+    );
+    expect(missed.source).toBe('tags');
+    expect(seen).toEqual(['only/a', 'only/b']);
+
+    cooled = false;
+    seen.length = 0;
+    const again = await composeScene(
+      { text: 'учёба', format: 'square' },
+      {
+        apiKey: secret,
+        items,
+        models: ['only/a', 'only/b'],
+        deadlineMs: 30_000,
+        cooldownMs: 5_000,
+        fetch,
+      },
+    );
+    expect(seen).toEqual(['only/a']);
+    expect(again).toMatchObject({ source: 'model', model: 'only/a' });
   });
 });

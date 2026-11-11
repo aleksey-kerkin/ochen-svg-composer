@@ -12,22 +12,28 @@ import {
 export const NVIDIA_URL =
   'https://integrate.api.nvidia.com/v1/chat/completions';
 
-/** Preferred models first, then reserves that answered within a few seconds. */
+/**
+ * Ultra answers in a few seconds. Lightning and GLM currently do not, so they
+ * run beside it instead of blocking it. MiniMax is the next reserve; step is last.
+ */
 export const DEFAULT_MODELS = [
+  'nvidia/nemotron-3-ultra-550b-a55b',
   'nvidia/nemotron-3.5-lightning-30b-a3b',
   'z-ai/glm-5.3-flash',
-  'nvidia/nemotron-3-ultra-550b-a55b',
-  'stepfun-ai/step-5-preview',
   'minimaxai/minimax-m3.1-flash',
+  'stepfun-ai/step-5-preview',
 ] as const;
 
 export const PRIMARY_MODEL = DEFAULT_MODELS[0];
 export const FALLBACK_MODEL = DEFAULT_MODELS[1];
 
+const LIGHTNING_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
 const MODEL_TIMEOUT_MS = 4_000;
 const COMPOSE_DEADLINE_MS = 10_000;
 const MIN_ATTEMPT_MS = 250;
-const TIMEOUT_COOLDOWN_MS = 60_000;
+const TIMEOUT_COOLDOWN_MS = 25_000;
+/** First wave. The rest of the chain runs only if nobody in the wave answers. */
+const RACE_WIDTH = 3;
 const ANSWER_TOKENS = 400;
 const REASONING_TOKENS = 1_600;
 
@@ -68,7 +74,7 @@ export interface ComposeDeps {
   deadlineMs?: number;
   /** Replaces `NVIDIA_MODELS` and the built-in list when non-empty. */
   models?: readonly string[];
-  /** How long a timed-out model stays skipped in this process. Default 60s. */
+  /** How long a timed-out model stays skipped in this process. Default 25s. */
   cooldownMs?: number;
 }
 
@@ -76,6 +82,13 @@ class ModelTimeoutError extends Error {
   constructor() {
     super('model timeout');
     this.name = 'ModelTimeoutError';
+  }
+}
+
+class ModelCancelledError extends Error {
+  constructor() {
+    super('model cancelled');
+    this.name = 'ModelCancelledError';
   }
 }
 
@@ -115,6 +128,13 @@ function chainFor(deps: ComposeDeps): string[] {
   return modelChain(process.env.NVIDIA_MODELS);
 }
 
+/** Ready models, or the first one when every model is still cooling. */
+function modelsToTry(models: string[], at: number): string[] {
+  const ready = models.filter((model) => !cooling(model, at));
+  if (ready.length > 0) return ready;
+  return models.slice(0, 1);
+}
+
 function cooling(model: string, at: number): boolean {
   const until = cooledUntil.get(model);
   if (until === undefined) return false;
@@ -147,7 +167,7 @@ function tuneBody(model: string, body: Record<string, unknown>): void {
     body.chat_template_kwargs = { thinking_mode: 'disabled' };
     return;
   }
-  if (model === PRIMARY_MODEL || model.toLowerCase().includes('glm')) {
+  if (model === LIGHTNING_MODEL || model.toLowerCase().includes('glm')) {
     body.chat_template_kwargs = { enable_thinking: false };
   }
   if (model.toLowerCase().includes('glm')) {
@@ -176,6 +196,38 @@ function completionBody(
   return body;
 }
 
+function linkSignal(
+  timeoutMs: number,
+  parent?: AbortSignal,
+): {
+  signal: AbortSignal;
+  timedOut: () => boolean;
+  cancelled: () => boolean;
+} {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs);
+  const controller = new AbortController();
+  const follow = (source: AbortSignal) => {
+    if (source.aborted) {
+      if (!controller.signal.aborted) controller.abort(source.reason);
+      return;
+    }
+    source.addEventListener(
+      'abort',
+      () => {
+        if (!controller.signal.aborted) controller.abort(source.reason);
+      },
+      { once: true },
+    );
+  };
+  follow(timeoutSignal);
+  if (parent) follow(parent);
+  return {
+    signal: controller.signal,
+    timedOut: () => timeoutSignal.aborted,
+    cancelled: () => parent?.aborted === true && !timeoutSignal.aborted,
+  };
+}
+
 async function askModel(
   model: string,
   input: ComposeInput,
@@ -183,8 +235,9 @@ async function askModel(
   apiKey: string,
   fetchFn: typeof fetch,
   timeoutMs: number,
+  parent?: AbortSignal,
 ): Promise<ScenePick> {
-  const signal = AbortSignal.timeout(timeoutMs);
+  const gates = linkSignal(timeoutMs, parent);
   let response: Response;
   try {
     response = await fetchFn(NVIDIA_URL, {
@@ -194,10 +247,11 @@ async function askModel(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(completionBody(model, input, items)),
-      signal,
+      signal: gates.signal,
     });
   } catch (error) {
-    if (signal.aborted || isTimeout(error)) throw new ModelTimeoutError();
+    if (gates.cancelled()) throw new ModelCancelledError();
+    if (gates.timedOut() || isTimeout(error)) throw new ModelTimeoutError();
     throw error;
   }
   if (!response.ok) {
@@ -219,10 +273,84 @@ async function askModel(
   );
 }
 
+interface Attempt {
+  input: ComposeInput;
+  items: LibraryItem[];
+  apiKey: string;
+  fetchFn: typeof fetch;
+  timeoutMs: number;
+  deadlineAt: number;
+  cooldownMs: number;
+}
+
+function budgetFor(attempt: Attempt): number | null {
+  const remaining = attempt.deadlineAt - Date.now();
+  if (remaining < MIN_ATTEMPT_MS) return null;
+  return Math.max(1, Math.min(attempt.timeoutMs, remaining));
+}
+
+/** First valid pick wins. The other requests are aborted and not cooled. */
+async function raceModels(
+  models: string[],
+  attempt: Attempt,
+): Promise<ScenePick> {
+  const controllers = models.map(() => new AbortController());
+  const tasks = models.map((model, index) => {
+    const budget = budgetFor(attempt);
+    const signal = controllers[index]?.signal;
+    if (budget === null || !signal)
+      return Promise.reject(new Error('deadline'));
+    return askModel(
+      model,
+      attempt.input,
+      attempt.items,
+      attempt.apiKey,
+      attempt.fetchFn,
+      budget,
+      signal,
+    )
+      .then((pick) => {
+        controllers.forEach((controller, other) => {
+          if (other !== index) controller.abort();
+        });
+        return pick;
+      })
+      .catch((error: unknown) => {
+        if (isTimeout(error)) rememberTimeout(model, attempt.cooldownMs);
+        throw error;
+      });
+  });
+  try {
+    return await Promise.any(tasks);
+  } finally {
+    for (const controller of controllers) controller.abort();
+  }
+}
+
+async function askNext(
+  model: string,
+  attempt: Attempt,
+): Promise<ScenePick | null> {
+  const budget = budgetFor(attempt);
+  if (budget === null) return null;
+  try {
+    return await askModel(
+      model,
+      attempt.input,
+      attempt.items,
+      attempt.apiKey,
+      attempt.fetchFn,
+      budget,
+    );
+  } catch (error) {
+    if (isTimeout(error)) rememberTimeout(model, attempt.cooldownMs);
+    return null;
+  }
+}
+
 /**
- * Walks the NVIDIA chain until one model returns a pick. Each model has a
- * short timeout, the whole walk has a deadline, and a model that just timed
- * out is skipped until the process cools down. Tags cover every miss.
+ * Races the first models together, then walks the rest until the deadline.
+ * A timed-out model is skipped for a short while. Tags cover every miss.
  */
 export async function composeScene(
   input: ComposeInput,
@@ -233,28 +361,30 @@ export async function composeScene(
   if (!text) return tagsPick(text, items);
   const apiKey = deps.apiKey?.trim();
   if (!apiKey) return tagsPick(text, items);
-  const fetchFn = deps.fetch ?? fetch;
   const timeoutMs = deps.timeoutMs ?? MODEL_TIMEOUT_MS;
-  const deadlineMs = deps.deadlineMs ?? COMPOSE_DEADLINE_MS;
-  const cooldownMs = deps.cooldownMs ?? TIMEOUT_COOLDOWN_MS;
-  const deadlineAt = Date.now() + deadlineMs;
-  for (const model of chainFor({ ...deps })) {
-    const remaining = deadlineAt - Date.now();
-    if (remaining < MIN_ATTEMPT_MS) break;
-    if (cooling(model, Date.now())) continue;
-    const attempt = Math.max(1, Math.min(timeoutMs, remaining));
+  const deadlineAt = Date.now() + (deps.deadlineMs ?? COMPOSE_DEADLINE_MS);
+  const attempt: Attempt = {
+    input: { ...input, text },
+    items,
+    apiKey,
+    fetchFn: deps.fetch ?? fetch,
+    timeoutMs,
+    deadlineAt,
+    cooldownMs: deps.cooldownMs ?? TIMEOUT_COOLDOWN_MS,
+  };
+  const models = modelsToTry(chainFor(deps), Date.now());
+  const wave = models.slice(0, RACE_WIDTH);
+  const rest = models.slice(RACE_WIDTH);
+  if (wave.length > 0 && budgetFor(attempt) !== null) {
     try {
-      return await askModel(
-        model,
-        { ...input, text },
-        items,
-        apiKey,
-        fetchFn,
-        attempt,
-      );
-    } catch (error) {
-      if (isTimeout(error)) rememberTimeout(model, cooldownMs);
+      return await raceModels(wave, attempt);
+    } catch {
+      // Every model in the wave failed. Try the rest if time remains.
     }
+  }
+  for (const model of rest) {
+    const pick = await askNext(model, attempt);
+    if (pick) return pick;
   }
   return tagsPick(text, items);
 }
