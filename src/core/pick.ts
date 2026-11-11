@@ -81,11 +81,42 @@ export function ensureMainPair(
   };
 }
 
+/** Drops closed think blocks. An unclosed think block has no answer after it. */
+function stripThinking(value: string): string {
+  const closed = value
+    .replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think\b[^>]*>[\s\S]*?<\/redacted_thinking>/gi, '');
+  const open = closed.search(/<think\b[^>]*>/i);
+  return (open >= 0 ? closed.slice(0, open) : closed).trim();
+}
+
+function textOf(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((part) => {
+      if (typeof part === 'string') return part;
+      if (
+        part &&
+        typeof part === 'object' &&
+        'text' in part &&
+        typeof part.text === 'string'
+      ) {
+        return part.text;
+      }
+      return '';
+    })
+    .join('');
+}
+
 /** Pulls the first JSON object out of a model reply, including a fenced block. */
 export function parseModelContent(content: unknown): unknown {
-  if (typeof content !== 'string') return null;
-  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(content);
-  const raw = fenced?.[1] ?? content;
+  const text = typeof content === 'string' ? content : textOf(content);
+  if (!text) return null;
+  const stripped = stripThinking(text);
+  if (!stripped) return null;
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(stripped);
+  const raw = fenced?.[1] ?? stripped;
   const start = raw.indexOf('{');
   const end = raw.lastIndexOf('}');
   if (start < 0 || end <= start) return null;
@@ -94,6 +125,26 @@ export function parseModelContent(content: unknown): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * Prefers `content`. Reasoning models often leave it null and put the only
+ * text in `reasoning_content`, so that field is the second place to look.
+ */
+export function parseModelMessage(message: unknown): unknown {
+  if (!message || typeof message !== 'object')
+    return parseModelContent(message);
+  const record = message as {
+    content?: unknown;
+    reasoning_content?: unknown;
+    reasoning?: unknown;
+  };
+  const fromContent = parseModelContent(record.content);
+  if (fromContent) return fromContent;
+  const reasoning =
+    textOf(record.reasoning_content) || textOf(record.reasoning);
+  if (!reasoning) return null;
+  return parseModelContent(reasoning);
 }
 
 export function finishPick(
