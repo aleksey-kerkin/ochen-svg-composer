@@ -1,5 +1,6 @@
 import { FORMATS } from '../model/formats.ts';
 import type { FormatId, PlacedObject } from '../model/types.ts';
+import { nextUid } from './uid.ts';
 
 /** Monochrome companions, preferred when they are not already in the scene. */
 const BACKDROP_POOL = [
@@ -14,15 +15,6 @@ const BACKDROP_POOL = [
   'phone',
   'book',
 ];
-
-function nextUid(objects: PlacedObject[]): string {
-  let max = 0;
-  for (const object of objects) {
-    const match = /^obj-(\d+)$/.exec(object.uid);
-    if (match?.[1]) max = Math.max(max, Number(match[1]));
-  }
-  return `obj-${max + 1}`;
-}
 
 /**
  * Adds two background-role objects when the scene has none.

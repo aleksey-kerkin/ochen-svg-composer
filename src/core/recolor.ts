@@ -59,7 +59,7 @@ export function normalizeHex(value: string): Hex | null {
   return `#${full}`;
 }
 
-export function cycleObjSlot(slot: Slot, shift: number): Slot {
+function cycleObjSlot(slot: Slot, shift: number): Slot {
   const index = OBJ_SLOTS.indexOf(slot as (typeof OBJ_SLOTS)[number]);
   if (index < 0) return slot;
   const steps =

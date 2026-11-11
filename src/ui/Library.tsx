@@ -1,21 +1,19 @@
 import { useState } from 'react';
 import { libraryItemMatches } from '../core/match.ts';
-import { recolorAsset, resolvePalette } from '../core/recolor.ts';
+import { recolorAsset } from '../core/recolor.ts';
 import manifest from '../library/manifest.json' with { type: 'json' };
 import { getAsset } from '../library/registry.ts';
 import type { Manifest, Role } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
+import { useScenePalette } from './useScenePalette.ts';
 
 const { items } = manifest as Manifest;
 
 export function Library() {
   const [activeRole, setActiveRole] = useState<Role>('main');
   const [search, setSearch] = useState('');
-  const size = useComposition((state) => state.size);
-  const paletteId = useComposition((state) => state.paletteId);
-  const customPalettes = useComposition((state) => state.customPalettes);
+  const { size, palette } = useScenePalette();
   const add = useComposition((state) => state.add);
-  const palette = resolvePalette(paletteId, customPalettes);
 
   const visibleItems = items.filter((item) => libraryItemMatches(item, search));
 

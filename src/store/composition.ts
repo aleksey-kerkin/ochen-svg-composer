@@ -1,5 +1,6 @@
 import { ensureBackdrop } from '../core/backdrop.ts';
 import { renderedSize } from '../core/geometry.ts';
+import { nextUid } from '../core/uid.ts';
 import {
   groupFillTarget,
   layoutScene,
@@ -53,10 +54,66 @@ export function initialComposition(): Composition {
   };
 }
 
-export function reduceComposition(
-  state: Composition,
-  action: CompositionAction,
-): Composition {
+type SceneAction = Extract<
+  CompositionAction,
+  {
+    type:
+      | 'setFormat'
+      | 'setTemplate'
+      | 'setWithBackgrounds'
+      | 'setSize'
+      | 'setScale'
+      | 'setPalette'
+      | 'reseed';
+  }
+>;
+
+type ObjectAction = Exclude<CompositionAction, SceneAction>;
+
+function withScale(state: Composition, scale: number): Composition {
+  if (!Number.isFinite(scale) || scale <= 0) {
+    throw new Error('scale must be a positive number');
+  }
+  return { ...state, scale };
+}
+
+function cycledColors(object: PlacedObject): PlacedObject {
+  if (object.role !== 'main') return object;
+  const next = (((object.colorShift ?? 0) + 1) % 3) as 0 | 1 | 2;
+  if (next === 0) {
+    const rest = { ...object };
+    delete rest.colorShift;
+    return rest;
+  }
+  return { ...object, colorShift: next };
+}
+
+function reduceScene(state: Composition, action: SceneAction): Composition {
+  switch (action.type) {
+    case 'setFormat':
+      return changeFormat(state, action.format);
+    case 'setTemplate':
+      return applyTemplate(state, action.templateId);
+    case 'setWithBackgrounds':
+      return changeBackdrop(state, action.enabled);
+    case 'setScale':
+      return withScale(state, action.scale);
+    case 'setSize':
+      return changeSize(state, action.size);
+    case 'setPalette':
+      return state.paletteId === action.paletteId
+        ? state
+        : { ...state, paletteId: action.paletteId };
+    case 'reseed':
+      return { ...state, seed: state.seed + 1 };
+    default: {
+      const unreachable: never = action;
+      return unreachable;
+    }
+  }
+}
+
+function reduceObject(state: Composition, action: ObjectAction): Composition {
   switch (action.type) {
     case 'add':
       return addObject(state, action.objectId, action.role);
@@ -82,45 +139,35 @@ export function reduceComposition(
       return stepZ(state, action.uid, -1);
     case 'select':
       return selectObject(state, action.uid);
-    case 'setFormat':
-      return changeFormat(state, action.format);
-    case 'setTemplate':
-      return applyTemplate(state, action.templateId);
-    case 'setWithBackgrounds':
-      return changeBackdrop(state, action.enabled);
-    case 'setScale':
-      if (!Number.isFinite(action.scale) || action.scale <= 0) {
-        throw new Error('scale must be a positive number');
-      }
-      return { ...state, scale: action.scale };
-    case 'setSize':
-      return changeSize(state, action.size);
-    case 'setPalette':
-      return state.paletteId === action.paletteId
-        ? state
-        : { ...state, paletteId: action.paletteId };
     case 'toggleRole':
       return updateObject(state, action.uid, (object) => ({
         ...object,
         role: object.role === 'main' ? 'background' : 'main',
       }));
     case 'cycleColors':
-      return updateObject(state, action.uid, (object) => {
-        if (object.role !== 'main') return object;
-        const next = (((object.colorShift ?? 0) + 1) % 3) as 0 | 1 | 2;
-        if (next === 0) {
-          const rest = { ...object };
-          delete rest.colorShift;
-          return rest;
-        }
-        return { ...object, colorShift: next };
-      });
-    case 'reseed':
-      return { ...state, seed: state.seed + 1 };
+      return updateObject(state, action.uid, cycledColors);
     default: {
       const unreachable: never = action;
       return unreachable;
     }
+  }
+}
+
+export function reduceComposition(
+  state: Composition,
+  action: CompositionAction,
+): Composition {
+  switch (action.type) {
+    case 'setFormat':
+    case 'setTemplate':
+    case 'setWithBackgrounds':
+    case 'setSize':
+    case 'setScale':
+    case 'setPalette':
+    case 'reseed':
+      return reduceScene(state, action);
+    default:
+      return reduceObject(state, action);
   }
 }
 
@@ -322,13 +369,4 @@ function updateObject(
       object.uid === uid ? update(object) : object,
     ),
   };
-}
-
-function nextUid(objects: PlacedObject[]): string {
-  let max = 0;
-  for (const object of objects) {
-    const match = /^obj-(\d+)$/.exec(object.uid);
-    if (match?.[1]) max = Math.max(max, Number(match[1]));
-  }
-  return `obj-${max + 1}`;
 }

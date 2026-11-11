@@ -45,7 +45,7 @@ const SUFFIXES = [
   'о',
 ];
 
-export function normalize(value: string): string {
+function normalize(value: string): string {
   return value.trim().toLowerCase().replaceAll('ё', 'е');
 }
 

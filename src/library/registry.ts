@@ -19,14 +19,18 @@ const cache = new Map<string, AssetSvg>();
 
 const SCHEME_IDS = new Set(manifest.schemes.map((scheme) => scheme.id));
 
-export function prefixSvgIds(markup: string, prefix: string): string {
-  const ids = collectIds(markup);
-  // Longer ids first so "Vector" is not rewritten inside "Vector_2".
-  const ordered = [...ids].sort((left, right) => right.length - left.length);
+/** Rewrites id, url(#id), and href="#id". Longer ids are replaced first. */
+export function rewriteSvgIds(
+  markup: string,
+  replacements: ReadonlyArray<readonly [string, string]>,
+): string {
+  const ordered = [...replacements].sort(
+    (left, right) => right[0].length - left[0].length,
+  );
   let result = markup;
-  for (const id of ordered) {
-    const escaped = escapeRegExp(id);
-    const next = `${prefix}${id}`;
+  for (const [raw, next] of ordered) {
+    if (raw === next) continue;
+    const escaped = escapeRegExp(raw);
     result = result.replace(
       new RegExp(String.raw`(\bid\s*=\s*["'])${escaped}(["'])`, 'g'),
       `$1${next}$2`,
@@ -44,6 +48,14 @@ export function prefixSvgIds(markup: string, prefix: string): string {
     );
   }
   return result;
+}
+
+export function prefixSvgIds(markup: string, prefix: string): string {
+  const ids = collectIds(markup);
+  return rewriteSvgIds(
+    markup,
+    [...ids].map((id) => [id, `${prefix}${id}`]),
+  );
 }
 
 export function getAsset(objectId: string, size: Size, role: Role): AssetSvg {

@@ -13,7 +13,7 @@ export const NVIDIA_URL =
   'https://integrate.api.nvidia.com/v1/chat/completions';
 export const PRIMARY_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
 export const FALLBACK_MODEL = 'z-ai/glm-5.3-flash';
-export const MODEL_TIMEOUT_MS = 9_000;
+const MODEL_TIMEOUT_MS = 9_000;
 
 const FORMAT_LABEL: Record<FormatId, string> = {
   landscape: 'горизонталь',

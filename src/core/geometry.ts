@@ -1,6 +1,5 @@
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import type { Manifest, PlacedObject, Role } from '../model/types.ts';
-import { PLACEMENT } from './profiles.ts';
 
 const library = manifestJson as Manifest;
 
@@ -11,43 +10,13 @@ export interface Box {
   h: number;
 }
 
-/**
- * Book's open pages. Kept for the phone-on-book checks. Other supports use
- * their own face in `profiles.ts`.
- */
-export const TOP_FACE = PLACEMENT.book?.face ?? {
-  x: 0.14,
-  y: 0.08,
-  w: 0.72,
-  h: 0.52,
-};
-
-export const SUPPORTS = new Set(
-  Object.values(PLACEMENT)
-    .filter((entry) => entry.partners.length > 0)
-    .map((entry) => entry.objectId),
-);
-
-export const RIDERS = new Set(
-  Object.values(PLACEMENT).flatMap((entry) => [...entry.partners]),
-);
-
-export function assetSize(
-  objectId: string,
-  role: Role,
-): { w: number; h: number } {
+function assetSize(objectId: string, role: Role): { w: number; h: number } {
   const item = library.items.find((entry) => entry.objectId === objectId);
   const asset = item?.assets.find(
     (entry) => entry.size === 'L' && entry.role === role,
   );
   if (!asset) throw new Error(`Missing L ${role} asset for ${objectId}`);
   return asset.svgSize;
-}
-
-/** How far the top-face center sits above the object's center, in pixels. */
-export function faceLift(height: number): number {
-  const faceMid = TOP_FACE.y + TOP_FACE.h / 2;
-  return (0.5 - faceMid) * height;
 }
 
 export function renderedSize(
@@ -69,15 +38,6 @@ export function axisBox(object: PlacedObject, scale: number): Box {
   const bw = halfW * cos + halfH * sin;
   const bh = halfW * sin + halfH * cos;
   return { x: object.x - bw, y: object.y - bh, w: bw * 2, h: bh * 2 };
-}
-
-export function topFace(box: Box): Box {
-  return {
-    x: box.x + box.w * TOP_FACE.x,
-    y: box.y + box.h * TOP_FACE.y,
-    w: box.w * TOP_FACE.w,
-    h: box.h * TOP_FACE.h,
-  };
 }
 
 export function intersection(a: Box, b: Box): Box | null {

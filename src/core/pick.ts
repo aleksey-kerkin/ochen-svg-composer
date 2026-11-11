@@ -3,8 +3,8 @@ import { expandMains, matchByKeywords } from './match.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
-export const MAIN_LIMIT = 4;
-export const BACKGROUND_LIMIT = 2;
+const MAIN_LIMIT = 4;
+const BACKGROUND_LIMIT = 2;
 
 const TEMPLATES = new Set<TemplateId>(['under-title', 'offset', 'compact']);
 
@@ -24,7 +24,7 @@ export interface ScenePick {
   reason: string;
 }
 
-export function templateForCount(count: number): TemplateId {
+function templateForCount(count: number): TemplateId {
   if (count <= 1) return 'under-title';
   return 'compact';
 }

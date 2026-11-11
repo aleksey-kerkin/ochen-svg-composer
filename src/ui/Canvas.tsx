@@ -5,11 +5,12 @@ import {
   type Ref,
 } from 'react';
 import { getAsset, scopeAsset } from '../library/registry.ts';
-import { frameMarkup, recolorAsset, resolvePalette } from '../core/recolor.ts';
+import { frameMarkup, recolorAsset } from '../core/recolor.ts';
 import { FORMATS, coverPlacement, coverTransform } from '../model/formats.ts';
 import { renderScale } from '../model/scale.ts';
 import type { Palette, PlacedObject, Size } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
+import { useScenePalette } from './useScenePalette.ts';
 import { applyInverse } from './svgPoint.ts';
 import { objectTransform } from './transforms.ts';
 import './canvas.css';
@@ -18,15 +19,12 @@ export function Canvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ uid: string; x: number; y: number } | null>(null);
   const format = useComposition((state) => state.format);
-  const size = useComposition((state) => state.size);
-  const paletteId = useComposition((state) => state.paletteId);
-  const customPalettes = useComposition((state) => state.customPalettes);
+  const { size, palette } = useScenePalette();
   const scale = useComposition((state) => renderScale(state.scale, state.size));
   const objects = useComposition((state) => state.objects);
   const selectedUid = useComposition((state) => state.selectedUid);
   const select = useComposition((state) => state.select);
   const move = useComposition((state) => state.move);
-  const palette = resolvePalette(paletteId, customPalettes);
 
   function locate(event: ReactPointerEvent<SVGElement>) {
     const ctm = svgRef.current?.getScreenCTM();

@@ -8,7 +8,7 @@ const manifest = manifestJson as Manifest;
  * Scene scale for L assets on the 1200×630 frame.
  * The spec's SVG-drop guide puts the book near 530px, which is 0.37 here.
  */
-export const LANDSCAPE_L_SCALE = 0.37;
+const LANDSCAPE_L_SCALE = 0.37;
 
 export function shortSide(format: FormatId): number {
   const frame = FORMATS[format];
