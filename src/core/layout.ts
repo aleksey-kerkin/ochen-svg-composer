@@ -3,16 +3,19 @@ import type {
   FormatId,
   LayoutTemplate,
   PlacedObject,
+  Size,
   Slot2D,
 } from '../model/types.ts';
 import {
+  anchorGroup,
   arrangeMains,
   backgroundReadable,
-  fitScale,
+  mainGroupFill,
   orderByDepth,
   placeEdgeBackgrounds,
+  scaleMainsToFill,
 } from './arrange.ts';
-import { axisBox, crossesFrame } from './geometry.ts';
+import { axisBox, crossesFrame, visibleFraction } from './geometry.ts';
 
 export type TemplateId = LayoutTemplate['id'];
 
@@ -265,53 +268,57 @@ export interface LaidOutScene {
   objects: PlacedObject[];
 }
 
+/** S sits at the low end of the group fill, L at the high end. */
+export function groupFillTarget(size: Size): number {
+  return size === 'S' ? 0.65 : 0.75;
+}
+
 /**
- * Picks a shared scale that fits two or more mains, then lays the scene out.
- * One main keeps the template's hero scale and its slot.
+ * Lays the scene out, then scales the main group uniformly so its limiting
+ * side fills about 65% (S) or 75% (L) of the frame. Backgrounds are parked
+ * nearer the edges afterwards and keep at least 60% of their box visible.
  */
 export function layoutScene(
   objects: PlacedObject[],
   template: LayoutTemplate,
   seed: number,
+  size: Size = 'L',
 ): LaidOutScene {
-  const mains = objects.filter((object) => object.role === 'main');
-  const reserveBackdrop = objects.some(
-    (object) => object.role === 'background',
-  );
-  let scale =
-    mains.length <= 1
-      ? template.scale
-      : fitScale(
-          mains,
-          template,
-          reserveBackdrop
-            ? objects.filter((object) => object.role === 'background')
-            : [],
-        );
-  let placed = layout(objects, { ...template, scale }, seed);
-  for (
-    let attempt = 0;
-    reserveBackdrop &&
-    attempt < 12 &&
-    !backdropReadable(placed, scale, template.format);
-    attempt += 1
-  ) {
-    scale *= 0.9;
-    placed = layout(objects, { ...template, scale }, seed);
+  const frame = FORMATS[template.format];
+  const target = groupFillTarget(size);
+  const base = layout(objects, template, seed);
+  const mainRef = base.filter((object) => object.role === 'main');
+  const backgroundRef = base.filter((object) => object.role === 'background');
+  let scale = template.scale;
+  let placed = base;
+  let bestVisible = -1;
+  for (let step = 0; step <= 24; step += 1) {
+    const fill = Math.max(0.34, target - step * 0.02);
+    const mains = mainRef.map((object) => ({ ...object }));
+    const nextScale = scaleMainsToFill(mains, template.scale, frame, fill);
+    anchorGroup(mains, template, frame, nextScale);
+    const backgrounds = placeEdgeBackgrounds(
+      backgroundRef.map((object) => ({ ...object })),
+      mains,
+      { ...template, scale: nextScale },
+      () => 0.5,
+    );
+    const visible = backgrounds.reduce((min, object) => {
+      const box = axisBox(object, nextScale);
+      return Math.min(min, visibleFraction(box, frame));
+    }, 1);
+    const readable = backgrounds.every((object) =>
+      backgroundReadable(object, nextScale, frame, mains),
+    );
+    if (readable || visible > bestVisible) {
+      bestVisible = visible;
+      scale = nextScale;
+      placed = orderByDepth(backgrounds, mains, nextScale);
+    }
+    if (readable || backgrounds.length === 0) break;
+    if (mainGroupFill(mains, nextScale, frame) <= 0.35) break;
   }
   return { scale, objects: placed };
-}
-
-function backdropReadable(
-  objects: PlacedObject[],
-  scale: number,
-  format: FormatId,
-): boolean {
-  const frame = FORMATS[format];
-  const mains = objects.filter((object) => object.role === 'main');
-  return objects
-    .filter((object) => object.role === 'background')
-    .every((object) => backgroundReadable(object, scale, frame, mains));
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */

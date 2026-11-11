@@ -349,19 +349,22 @@ function backgroundsFit(
   );
 }
 
-/** Center sits inside the frame, so a tall lamp is not only a sliver at the edge. */
+/**
+ * Center stays inside the frame. The 60% visibility rule keeps a cropped
+ * backdrop from becoming a sliver, so the inset can stay small and the
+ * object can sit near the edge.
+ */
 export function centerClear(
   center: { x: number; y: number },
-  size: { w: number; h: number },
+  _size: { w: number; h: number },
   frame: { w: number; h: number },
 ): boolean {
-  const marginX = Math.min(Math.max(size.w * 0.34, 28), frame.w * 0.28);
-  const marginY = Math.min(Math.max(size.h * 0.3, 28), frame.h * 0.22);
+  const margin = 12;
   return (
-    center.x >= marginX - 0.5 &&
-    center.x <= frame.w - marginX + 0.5 &&
-    center.y >= marginY - 0.5 &&
-    center.y <= frame.h - marginY + 0.5
+    center.x >= margin &&
+    center.x <= frame.w - margin &&
+    center.y >= margin &&
+    center.y <= frame.h - margin
   );
 }
 
@@ -377,6 +380,75 @@ export function backgroundReadable(
   return mains.every(
     (main) => intersection(axisBox(main, scale), box) === null,
   );
+}
+
+/**
+ * Uniform scale around the group center. `fill` is the share of the frame
+ * axis that limits the group (65% at S, 75% at L).
+ */
+export function scaleMainsToFill(
+  mains: PlacedObject[],
+  scale: number,
+  frame: { w: number; h: number },
+  fill: number,
+): number {
+  if (mains.length === 0) return scale;
+  const union = unionBox(mains.map((object) => axisBox(object, scale)));
+  if (union.w < 1 || union.h < 1) return scale;
+  const factor = fill * Math.min(frame.w / union.w, frame.h / union.h);
+  const cx = union.x + union.w / 2;
+  const cy = union.y + union.h / 2;
+  for (const object of mains) {
+    object.x = cx + (object.x - cx) * factor;
+    object.y = cy + (object.y - cy) * factor;
+  }
+  return scale * factor;
+}
+
+/** Moves the scaled group to the template anchor without changing its size. */
+export function anchorGroup(
+  mains: PlacedObject[],
+  template: LayoutTemplate,
+  frame: { w: number; h: number },
+  scale: number,
+): void {
+  if (mains.length === 0) return;
+  const union = unionBox(mains.map((object) => axisBox(object, scale)));
+  let tx = frame.w / 2;
+  let ty = frame.h / 2;
+  if (template.id === 'under-title') ty = frame.h * 0.7;
+  if (template.id === 'offset') {
+    tx = frame.w * 0.4;
+    ty = frame.h * 0.58;
+  }
+  translate(mains, tx - (union.x + union.w / 2), ty - (union.y + union.h / 2));
+  const next = unionBox(mains.map((object) => axisBox(object, scale)));
+  const pad = 4;
+  let dx = 0;
+  let dy = 0;
+  if (next.w <= frame.w - pad * 2) {
+    if (next.x < pad) dx = pad - next.x;
+    else if (next.x + next.w > frame.w - pad) {
+      dx = frame.w - pad - (next.x + next.w);
+    }
+  }
+  if (next.h <= frame.h - pad * 2) {
+    if (next.y < pad) dy = pad - next.y;
+    else if (next.y + next.h > frame.h - pad) {
+      dy = frame.h - pad - (next.y + next.h);
+    }
+  }
+  translate(mains, dx, dy);
+}
+
+export function mainGroupFill(
+  mains: PlacedObject[],
+  scale: number,
+  frame: { w: number; h: number },
+): number {
+  if (mains.length === 0) return 0;
+  const union = unionBox(mains.map((object) => axisBox(object, scale)));
+  return Math.max(union.w / frame.w, union.h / frame.h);
 }
 
 /** Largest scale at or below the template scale that keeps the group inside. */
@@ -417,8 +489,8 @@ function edgeSpots(
   frame: { w: number; h: number },
 ): { x: number; y: number }[] {
   const spots: { x: number; y: number }[] = [];
-  const stepX = Math.max(24, frame.w / 26);
-  const stepY = Math.max(24, frame.h / 18);
+  const stepX = Math.max(16, frame.w / 40);
+  const stepY = Math.max(16, frame.h / 36);
   const minX = -size.w * 0.42;
   const maxX = frame.w + size.w * 0.42;
   const minY = -size.h * 0.42;
@@ -474,8 +546,15 @@ export function placeEdgeBackgrounds(
         visible >= MIN_VISIBLE && visible <= 0.9 && crossesFrame(box, frame)
           ? 0.04
           : 0;
-      const score = visible + lightCrop;
-      if (!fallback || score > fallback.score) fallback = { ...spot, score };
+      const fromCenter = Math.hypot(spot.x - frame.w / 2, spot.y - frame.h / 2);
+      const edge = Math.min(
+        1,
+        fromCenter / Math.hypot(frame.w / 2, frame.h / 2),
+      );
+      const score = edge + visible * 0.35 + lightCrop;
+      if (!fallback || visible > fallback.score) {
+        fallback = { ...spot, score: visible };
+      }
       if (visible < MIN_VISIBLE) continue;
       if (!centerClear(spot, size, frame)) continue;
       if (!best || score > best.score) best = { ...spot, score };

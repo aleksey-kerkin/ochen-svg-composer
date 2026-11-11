@@ -9,8 +9,14 @@ import type {
   PlacedObject,
   Slot2D,
 } from '../../model/types.ts';
-import { visibleFraction } from '../geometry.ts';
-import { layout, layoutScene, templateById } from '../layout.ts';
+import { mainGroupFill } from '../arrange.ts';
+import { axisBox, visibleFraction } from '../geometry.ts';
+import {
+  groupFillTarget,
+  layout,
+  layoutScene,
+  templateById,
+} from '../layout.ts';
 
 const library = manifest as Manifest;
 const TEMPLATE_IDS = ['under-title', 'offset', 'compact'] as const;
@@ -239,6 +245,74 @@ describe('layout', () => {
       expect(templateById('compact', format).mainSlots.length).toBeGreaterThan(
         1,
       );
+    }
+  });
+
+  it('scales the main group to 65% at S and 75% at L', () => {
+    for (const format of FORMATS_IDS) {
+      const frame = FORMATS[format];
+      for (const templateId of TEMPLATE_IDS) {
+        const template = templateById(templateId, format);
+        for (const size of ['S', 'L'] as const) {
+          const scene = layoutScene(
+            [
+              placed({ uid: 'book', objectId: 'book' }),
+              placed({ uid: 'pen', objectId: 'pen' }),
+            ],
+            template,
+            2,
+            size,
+          );
+          const mains = scene.objects.filter(
+            (object) => object.role === 'main',
+          );
+          const fill = mainGroupFill(mains, scene.scale, frame);
+          expect(fill).toBeGreaterThan(groupFillTarget(size) - 0.03);
+          expect(fill).toBeLessThan(groupFillTarget(size) + 0.03);
+        }
+      }
+    }
+  });
+
+  it('shrinks the group only until a lamp stays 60% visible', () => {
+    for (const format of FORMATS_IDS) {
+      const frame = FORMATS[format];
+      for (const templateId of TEMPLATE_IDS) {
+        const template = templateById(templateId, format);
+        const fills: number[] = [];
+        for (const size of ['S', 'L'] as const) {
+          const scene = layoutScene(
+            [
+              placed({ uid: 'book', objectId: 'book' }),
+              placed({ uid: 'pen', objectId: 'pen' }),
+              placed({
+                uid: 'lamp',
+                objectId: 'lamp',
+                role: 'background',
+              }),
+            ],
+            template,
+            1,
+            size,
+          );
+          const mains = scene.objects.filter(
+            (object) => object.role === 'main',
+          );
+          const fill = mainGroupFill(mains, scene.scale, frame);
+          fills.push(fill);
+          expect(fill).toBeGreaterThan(0.58);
+          expect(fill).toBeLessThanOrEqual(groupFillTarget(size) + 0.03);
+          for (const background of scene.objects) {
+            if (background.role !== 'background') continue;
+            expect(
+              visibleFraction(axisBox(background, scene.scale), frame),
+            ).toBeGreaterThanOrEqual(0.6);
+          }
+        }
+        const small = fills[0] ?? 0;
+        const large = fills[1] ?? 0;
+        expect(small).toBeLessThanOrEqual(large + 1e-6);
+      }
     }
   });
 });

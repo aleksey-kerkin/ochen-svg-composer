@@ -71,7 +71,7 @@ export function Canvas() {
   }
 
   return (
-    <div className="canvas-stage">
+    <div className="canvas-stage" data-format={format}>
       <SceneSvg
         svgRef={svgRef}
         format={format}

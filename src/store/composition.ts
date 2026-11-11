@@ -1,6 +1,11 @@
 import { ensureBackdrop } from '../core/backdrop.ts';
 import { renderedSize } from '../core/geometry.ts';
-import { layoutScene, templateById, type TemplateId } from '../core/layout.ts';
+import {
+  groupFillTarget,
+  layoutScene,
+  templateById,
+  type TemplateId,
+} from '../core/layout.ts';
 import manifestJson from '../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../model/formats.ts';
 import { defaultScale, shortSide } from '../model/scale.ts';
@@ -89,9 +94,7 @@ export function reduceComposition(
       }
       return { ...state, scale: action.scale };
     case 'setSize':
-      return state.size === action.size
-        ? state
-        : { ...state, size: action.size };
+      return changeSize(state, action.size);
     case 'setPalette':
       return state.paletteId === action.paletteId
         ? state
@@ -126,7 +129,12 @@ function changeFormat(state: Composition, format: FormatId): Composition {
   if (state.templateId) {
     const template = templateById(state.templateId, format);
     const next = { ...state, format };
-    const scene = layoutScene(objectsForTemplate(next), template, state.seed);
+    const scene = layoutScene(
+      objectsForTemplate(next),
+      template,
+      state.seed,
+      state.size,
+    );
     return keepSelection({
       ...next,
       scale: scene.scale,
@@ -156,13 +164,27 @@ function objectsForTemplate(state: Composition): PlacedObject[] {
   return ensureBackdrop(state.objects, state.format);
 }
 
+function changeSize(state: Composition, size: Size): Composition {
+  if (state.size === size) return state;
+  if (state.templateId) {
+    return applyTemplate({ ...state, size }, state.templateId);
+  }
+  const ratio = groupFillTarget(size) / groupFillTarget(state.size);
+  return { ...state, size, scale: state.scale * ratio };
+}
+
 function applyTemplate(
   state: Composition,
   templateId: TemplateId,
 ): Composition {
   const template = templateById(templateId, state.format);
   const next = { ...state, templateId };
-  const scene = layoutScene(objectsForTemplate(next), template, state.seed);
+  const scene = layoutScene(
+    objectsForTemplate(next),
+    template,
+    state.seed,
+    state.size,
+  );
   return keepSelection({
     ...next,
     scale: scene.scale,

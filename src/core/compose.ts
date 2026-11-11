@@ -1,4 +1,4 @@
-import type { FormatId, PlacedObject } from '../model/types.ts';
+import type { FormatId, PlacedObject, Size } from '../model/types.ts';
 import { ensureBackdrop } from './backdrop.ts';
 import type { NameMatch } from './match.ts';
 import { layoutScene, templateById, type TemplateId } from './layout.ts';
@@ -7,6 +7,8 @@ export interface ComposeOptions {
   format: FormatId;
   templateId?: TemplateId;
   seed: number;
+  /** Default L. S and L pick the low and high end of the group fill. */
+  size?: Size;
   /** Default on. Off keeps only the named main objects. */
   withBackgrounds?: boolean;
 }
@@ -69,7 +71,12 @@ export function composePlacements(
     options.withBackgrounds === false
       ? named
       : ensureBackdrop(named, options.format);
-  const scene = layoutScene(objects, template, options.seed);
+  const scene = layoutScene(
+    objects,
+    template,
+    options.seed,
+    options.size ?? 'L',
+  );
   return {
     templateId,
     scale: scene.scale,
@@ -80,7 +87,7 @@ export function composePlacements(
 /** Lays out a metaphor pick. Backgrounds are only those the pick named. */
 export function composePick(
   pick: { main: string[]; background: string[]; template: TemplateId },
-  options: { format: FormatId; seed: number },
+  options: { format: FormatId; seed: number; size?: Size },
 ): ComposedScene {
   const template = templateById(pick.template, options.format);
   const objects: PlacedObject[] = [];
@@ -106,7 +113,12 @@ export function composePick(
       z: 0,
     });
   }
-  const scene = layoutScene(objects, template, options.seed);
+  const scene = layoutScene(
+    objects,
+    template,
+    options.seed,
+    options.size ?? 'L',
+  );
   return {
     templateId: pick.template,
     scale: scene.scale,

@@ -193,7 +193,7 @@ describe('composition reducer', () => {
     });
     const next = reduceComposition(turned, { type: 'setSize', size: 'S' });
     expect(next.size).toBe('S');
-    expect(next.scale).toBe(turned.scale);
+    expect(next.scale).toBeCloseTo(turned.scale * (0.65 / 0.75), 5);
     expect(byUid(next, uid).x).toBe(byUid(turned, uid).x);
     expect(byUid(next, uid).y).toBe(byUid(turned, uid).y);
     expect(byUid(next, uid).rotation).toBe(20);

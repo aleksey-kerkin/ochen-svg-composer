@@ -110,6 +110,7 @@ function applyMetaphor(
   const composed = composePick(pick, {
     format: composition.format,
     seed: composition.seed,
+    size: composition.size,
   });
   const next: CompositionStore = {
     ...state,
@@ -223,6 +224,7 @@ export const useComposition = create<CompositionStore>((set, get) => ({
           ? { templateId: composition.templateId }
           : {}),
         seed: composition.seed,
+        size: composition.size,
         withBackgrounds: composition.withBackgrounds !== false,
       });
       const next: CompositionStore = {
