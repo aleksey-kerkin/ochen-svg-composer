@@ -1,4 +1,5 @@
 import { composeScene } from '../src/server/composeScene.ts';
+import { readNvidiaKey } from '../src/server/readApiKey.ts';
 import type { FormatId } from '../src/model/types.ts';
 
 interface NodeResponse {
@@ -42,7 +43,7 @@ export default async function handler(req: NodeRequest, res: NodeResponse) {
     return;
   }
   const result = await composeScene(input, {
-    apiKey: process.env.NVIDIA_API_KEY,
+    apiKey: readNvidiaKey(),
   });
   res.status(200).json(result);
 }

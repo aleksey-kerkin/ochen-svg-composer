@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
 import type { FormatId } from './src/model/types.ts';
 import { composeScene } from './src/server/composeScene.ts';
+import { readNvidiaKey } from './src/server/readApiKey.ts';
 
 function readBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,7 +53,7 @@ function composeApi(): Plugin {
             }
             const result = await composeScene(
               { text, format },
-              { apiKey: process.env.NVIDIA_API_KEY },
+              { apiKey: readNvidiaKey() },
             );
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json; charset=utf-8');

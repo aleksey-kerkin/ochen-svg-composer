@@ -1,6 +1,7 @@
 import { composeScene } from '../src/server/composeScene.ts';
+import { readNvidiaKey } from '../src/server/readApiKey.ts';
 
-const apiKey = process.env.NVIDIA_API_KEY?.trim();
+const apiKey = readNvidiaKey();
 if (!apiKey) {
   console.error('NVIDIA_API_KEY is not set');
   process.exit(1);
