@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { FORMATS } from '../../model/formats.ts';
+import { mainGroupFill } from '../arrange.ts';
 import { composePick, composePlacements } from '../compose.ts';
-import { templateById } from '../layout.ts';
 
 describe('composePlacements', () => {
   it('lays two objects on the active template in the current format', () => {
@@ -12,26 +13,17 @@ describe('composePlacements', () => {
       { format: 'portrait', templateId: 'offset', seed: 1 },
     );
     expect(placed.templateId).toBe('offset');
-    expect(placed.scale).toBeLessThanOrEqual(
-      templateById('offset', 'portrait').scale,
-    );
-    expect(placed.scale).toBeGreaterThan(0.45);
+    expect(
+      mainGroupFill(placed.objects, placed.scale, FORMATS.portrait),
+    ).toBeGreaterThan(0.8);
     const mains = placed.objects.filter((object) => object.role === 'main');
     expect(mains.map((object) => object.objectId).sort()).toEqual([
       'flowers',
       'headphones',
     ]);
-    const backgrounds = placed.objects.filter(
-      (object) => object.role === 'background',
-    );
-    expect(backgrounds.length).toBeGreaterThanOrEqual(1);
-    expect(backgrounds.length).toBeLessThanOrEqual(2);
     expect(
-      backgrounds.every(
-        (object) =>
-          object.objectId !== 'flowers' && object.objectId !== 'headphones',
-      ),
-    ).toBe(true);
+      placed.objects.filter((object) => object.role === 'background'),
+    ).toHaveLength(0);
   });
 
   it('picks a wider template instead of dropping objects', () => {
@@ -52,7 +44,7 @@ describe('composePlacements', () => {
     ).toBe('main');
   });
 
-  it('keeps every named object main and adds background companions', () => {
+  it('keeps every named main and does not add a background once the seats are full', () => {
     const four = composePlacements(
       [
         { objectId: 'book', count: 1 },
@@ -70,8 +62,8 @@ describe('composePlacements', () => {
       'puzzle',
     ]);
     expect(
-      four.objects.filter((object) => object.role === 'background').length,
-    ).toBeGreaterThanOrEqual(1);
+      four.objects.filter((object) => object.role === 'background'),
+    ).toHaveLength(0);
 
     const six = composePlacements([{ objectId: 'coin', count: 6 }], {
       format: 'landscape',

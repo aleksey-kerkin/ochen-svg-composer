@@ -73,20 +73,6 @@ function sceneObjects(ids: string[], format: FormatId): PlacedObject[] {
   return ensureBackdrop(mains, format);
 }
 
-function insideFrame(
-  object: PlacedObject,
-  scale: number,
-  frame: { w: number; h: number },
-): boolean {
-  const box = axisBox(object, scale);
-  return (
-    box.x >= -2 &&
-    box.y >= -2 &&
-    box.x + box.w <= frame.w + 2 &&
-    box.y + box.h <= frame.h + 2
-  );
-}
-
 function problems(
   objects: PlacedObject[],
   scale: number,
@@ -97,8 +83,9 @@ function problems(
   const mains = objects.filter((object) => object.role === 'main');
   const backgrounds = objects.filter((object) => object.role === 'background');
   for (const object of mains) {
-    if (!insideFrame(object, scale, frame)) {
-      notes.push(`${object.objectId} leaves the frame`);
+    const visible = visibleFraction(axisBox(object, scale), frame);
+    if (visible < 0.38) {
+      notes.push(`${object.objectId} shows ${Math.round(visible * 100)}%`);
     }
   }
   if (template.safeArea) {
@@ -149,7 +136,7 @@ function problems(
     if (background.z >= minMainZ)
       notes.push(`${background.objectId} is in front`);
     const visible = visibleFraction(axisBox(background, scale), frame);
-    if (visible < 0.6) {
+    if (visible < 0.38 || visible > 0.62) {
       notes.push(`${background.objectId} shows ${Math.round(visible * 100)}%`);
     }
     for (const main of mains) {

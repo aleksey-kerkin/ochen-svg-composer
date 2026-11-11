@@ -371,11 +371,11 @@ describe('editor', () => {
     const state = useComposition.getState();
     expect(state.metaphor?.source).toBe('model');
     expect(
-      state.objects.find((object) => object.objectId === 'lamp')?.role,
-    ).toBe('background');
-    expect(
       state.objects.find((object) => object.objectId === 'headphones')?.role,
     ).toBe('main');
+    expect(
+      state.objects.find((object) => object.objectId === 'lamp'),
+    ).toBeUndefined();
   });
 
   it('«Скачать SVG» saves a file named from the format and date', () => {

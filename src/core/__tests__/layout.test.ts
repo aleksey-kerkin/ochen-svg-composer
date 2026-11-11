@@ -9,7 +9,13 @@ import type {
   PlacedObject,
   Slot2D,
 } from '../../model/types.ts';
-import { visibleFraction } from '../geometry.ts';
+import { mainGroupFill } from '../arrange.ts';
+import {
+  type Box,
+  axisBox,
+  intersection,
+  visibleFraction,
+} from '../geometry.ts';
 import { layout, layoutScene, templateById } from '../layout.ts';
 
 const library = manifest as Manifest;
@@ -153,19 +159,9 @@ describe('layout', () => {
       );
       expect(backgrounds.length).toBeGreaterThan(0);
       for (const object of mains) {
-        const item = library.items.find(
-          (entry) => entry.objectId === object.objectId,
-        );
-        const asset = item?.assets.find(
-          (entry) => entry.size === 'L' && entry.role === 'main',
-        );
-        if (!asset) throw new Error(object.objectId);
-        const halfW = (asset.svgSize.w * scene.scale) / 2;
-        const halfH = (asset.svgSize.h * scene.scale) / 2;
-        expect(object.x - halfW).toBeGreaterThanOrEqual(-1);
-        expect(object.y - halfH).toBeGreaterThanOrEqual(-1);
-        expect(object.x + halfW).toBeLessThanOrEqual(frame.w + 1);
-        expect(object.y + halfH).toBeLessThanOrEqual(frame.h + 1);
+        expect(
+          visibleFraction(axisBox(object, scene.scale), frame),
+        ).toBeGreaterThanOrEqual(0.7);
       }
       for (const object of backgrounds) {
         const item = library.items.find(
@@ -186,7 +182,8 @@ describe('layout', () => {
           },
           frame,
         );
-        expect(visible).toBeGreaterThanOrEqual(0.6);
+        expect(visible).toBeGreaterThanOrEqual(0.38);
+        expect(visible).toBeLessThanOrEqual(0.62);
       }
     }
   });
@@ -241,4 +238,121 @@ describe('layout', () => {
       );
     }
   });
+
+  it('scales the hero to 65-80% at S and 75-90% at L', () => {
+    for (const format of FORMATS_IDS) {
+      const frame = FORMATS[format];
+      for (const templateId of TEMPLATE_IDS) {
+        const template = templateById(templateId, format);
+        for (const size of ['S', 'L'] as const) {
+          const scene = layoutScene(
+            [
+              placed({ uid: 'book', objectId: 'book' }),
+              placed({ uid: 'pen', objectId: 'pen' }),
+            ],
+            template,
+            2,
+            size,
+          );
+          const mains = scene.objects.filter(
+            (object) => object.role === 'main',
+          );
+          const fill = mainGroupFill(mains, scene.scale, frame);
+          const [low, high] = size === 'S' ? [0.65, 0.8] : [0.75, 0.9];
+          expect(fill).toBeGreaterThanOrEqual(low - 0.02);
+          expect(fill).toBeLessThanOrEqual(high + 0.02);
+        }
+      }
+    }
+  });
+
+  it('crops one secondary tight against the hero', () => {
+    for (const format of FORMATS_IDS) {
+      const frame = FORMATS[format];
+      const limit = Math.min(frame.w, frame.h);
+      for (const templateId of TEMPLATE_IDS) {
+        const template = templateById(templateId, format);
+        for (const size of ['S', 'L'] as const) {
+          const scene = layoutScene(
+            [
+              placed({ uid: 'book', objectId: 'book' }),
+              placed({ uid: 'pen', objectId: 'pen' }),
+              placed({
+                uid: 'lamp',
+                objectId: 'lamp',
+                role: 'background',
+              }),
+              placed({
+                uid: 'flowers',
+                objectId: 'flowers',
+                role: 'background',
+              }),
+            ],
+            template,
+            1,
+            size,
+          );
+          const mains = scene.objects.filter(
+            (object) => object.role === 'main',
+          );
+          const backgrounds = scene.objects.filter(
+            (object) => object.role === 'background',
+          );
+          const expected = template.format === 'landscape' ? 2 : 1;
+          expect(backgrounds).toHaveLength(expected);
+          const mainUnion = unionOf(
+            mains.map((object) => axisBox(object, scene.scale)),
+          );
+          const fill = mainGroupFill(mains, scene.scale, frame);
+          const [low, high] = size === 'S' ? [0.65, 0.8] : [0.75, 0.9];
+          expect(fill).toBeGreaterThanOrEqual(low - 0.02);
+          expect(fill).toBeLessThanOrEqual(high + 0.02);
+          const hero = mains.reduce((best, object) =>
+            axisBox(object, scene.scale).w * axisBox(object, scene.scale).h >
+            axisBox(best, scene.scale).w * axisBox(best, scene.scale).h
+              ? object
+              : best,
+          );
+          expect(
+            visibleFraction(axisBox(hero, scene.scale), frame),
+          ).toBeGreaterThanOrEqual(0.7);
+          for (const background of backgrounds) {
+            const box = axisBox(background, scene.scale);
+            const visible = visibleFraction(box, frame);
+            expect(visible).toBeGreaterThanOrEqual(0.38);
+            expect(visible).toBeLessThanOrEqual(0.62);
+            expect(separation(box, mainUnion)).toBeLessThan(limit * 0.04);
+            for (const main of mains) {
+              expect(intersection(box, axisBox(main, scene.scale))).toBeNull();
+            }
+            expect(background.z).toBeLessThan(
+              Math.min(...mains.map((object) => object.z)),
+            );
+          }
+        }
+      }
+    }
+  });
 });
+
+function unionOf(boxes: Box[]): Box {
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const right = Math.max(...boxes.map((box) => box.x + box.w));
+  const bottom = Math.max(...boxes.map((box) => box.y + box.h));
+  return { x: left, y: top, w: right - left, h: bottom - top };
+}
+
+function separation(box: Box, other: Box): number {
+  const dx = Math.max(
+    other.x - (box.x + box.w),
+    box.x - (other.x + other.w),
+    0,
+  );
+  const dy = Math.max(
+    other.y - (box.y + box.h),
+    box.y - (other.y + other.h),
+    0,
+  );
+  return Math.hypot(dx, dy);
+}

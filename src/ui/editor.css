@@ -130,6 +130,18 @@
   border-bottom: 1px solid rgb(24 24 23 / 0.1);
 }
 
+.toolbar__scroll {
+  display: contents;
+}
+
+.fold {
+  display: contents;
+}
+
+.fold > summary {
+  display: none;
+}
+
 .toolbar__group {
   display: flex;
   flex-wrap: wrap;
@@ -360,29 +372,109 @@
   background: #f3efe6;
 }
 
-@media (max-width: 800px) {
-  .editor {
+@media (max-width: 640px) {
+  html,
+  body,
+  #root {
     height: auto;
-    min-height: 100vh;
+    min-height: 0;
     overflow: visible;
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto minmax(16rem, 1fr) auto auto;
-    grid-template-areas:
-      'toolbar'
-      'prompt'
-      'canvas'
-      'library'
-      'inspector';
+  }
+
+  .editor {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+    touch-action: pan-y;
   }
 
   .canvas-stage {
-    height: 70vh;
+    order: 0;
+    width: 100%;
+    height: auto;
+    flex: 0 0 auto;
+  }
+
+  .canvas-stage[data-format='landscape'] {
+    aspect-ratio: 1200 / 630;
+  }
+
+  .canvas-stage[data-format='square'] {
+    aspect-ratio: 1 / 1;
+  }
+
+  .canvas-stage[data-format='portrait'] {
+    aspect-ratio: 1080 / 1620;
+  }
+
+  .toolbar {
+    order: 1;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  .prompt {
+    order: 2;
+  }
+
+  .library {
+    order: 3;
+  }
+
+  .inspector {
+    order: 4;
   }
 
   .library,
   .inspector {
+    overflow: visible;
     border-right: none;
     border-left: none;
     border-top: 1px solid rgb(24 24 23 / 0.08);
+  }
+
+  .toolbar__scroll {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.15rem;
+  }
+
+  .toolbar__group {
+    flex-wrap: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .seg {
+    padding: 0.28rem 0.45rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .fold {
+    display: block;
+    width: 100%;
+  }
+
+  .fold > summary {
+    display: list-item;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+
+  .prompt__form {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .prompt__input {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 }

@@ -3,12 +3,12 @@ import type {
   FormatId,
   LayoutTemplate,
   PlacedObject,
+  Size,
   Slot2D,
 } from '../model/types.ts';
 import {
   arrangeMains,
-  backgroundReadable,
-  fitScale,
+  frameCloseUp,
   orderByDepth,
   placeEdgeBackgrounds,
 } from './arrange.ts';
@@ -266,52 +266,36 @@ export interface LaidOutScene {
 }
 
 /**
- * Picks a shared scale that fits two or more mains, then lays the scene out.
- * One main keeps the template's hero scale and its slot.
+ * L sizes the hero to about 82% of the frame's limiting side (the middle of
+ * 75–90%). S is about 72% (the middle of 65–80%). The hero may bleed.
+ */
+export function groupFillTarget(size: Size): number {
+  return size === 'S' ? 0.72 : 0.82;
+}
+
+/**
+ * Sizes the hero first, then seats at most one secondary tight against it
+ * (two on landscape). Secondaries share the hero's scale and are cropped by
+ * the frame to about half their box. Riders stay on their support.
  */
 export function layoutScene(
   objects: PlacedObject[],
   template: LayoutTemplate,
   seed: number,
+  size: Size = 'L',
 ): LaidOutScene {
-  const mains = objects.filter((object) => object.role === 'main');
-  const reserveBackdrop = objects.some(
-    (object) => object.role === 'background',
-  );
-  let scale =
-    mains.length <= 1
-      ? template.scale
-      : fitScale(
-          mains,
-          template,
-          reserveBackdrop
-            ? objects.filter((object) => object.role === 'background')
-            : [],
-        );
-  let placed = layout(objects, { ...template, scale }, seed);
-  for (
-    let attempt = 0;
-    reserveBackdrop &&
-    attempt < 12 &&
-    !backdropReadable(placed, scale, template.format);
-    attempt += 1
-  ) {
-    scale *= 0.9;
-    placed = layout(objects, { ...template, scale }, seed);
+  const target = groupFillTarget(size);
+  const base = layout(objects, template, seed);
+  const mains = base
+    .filter((object) => object.role === 'main')
+    .map((object) => ({ ...object }));
+  if (mains.length === 0) {
+    return { scale: template.scale, objects: base };
   }
-  return { scale, objects: placed };
-}
-
-function backdropReadable(
-  objects: PlacedObject[],
-  scale: number,
-  format: FormatId,
-): boolean {
-  const frame = FORMATS[format];
-  const mains = objects.filter((object) => object.role === 'main');
-  return objects
+  const backgrounds = base
     .filter((object) => object.role === 'background')
-    .every((object) => backgroundReadable(object, scale, frame, mains));
+    .map((object) => ({ ...object }));
+  return frameCloseUp(mains, backgrounds, template, template.scale, target);
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */

@@ -149,12 +149,23 @@ export function frameMarkup(
   size: Composition['size'],
 ): AssetSvg {
   const scheme = manifest.schemes.find((entry) => entry.id === palette.id);
-  if (scheme) return getBackgroundAsset(scheme.id, size);
+  if (scheme) return quietFrame(getBackgroundAsset(scheme.id, size));
   const lilac = getBackgroundAsset('lilac', size);
-  return {
+  return quietFrame({
     ...lilac,
     inner: recolorAsset(lilac.inner, palette, 'frame').markup,
-  };
+  });
+}
+
+/** Long accent strokes sit in the empty field. Keep them, but quieter. */
+function quietFrame(asset: AssetSvg): AssetSvg {
+  const inner = asset.inner
+    .replace(/<line\b(?![^>]*\bopacity=)/g, '<line opacity="0.28"')
+    .replace(
+      /<path\b(?![^>]*\bopacity=)([^>]*\bstroke=)/g,
+      '<path opacity="0.28"$1',
+    );
+  return { ...asset, inner };
 }
 
 export function recolorAsset(

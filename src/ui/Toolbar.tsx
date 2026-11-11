@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
+import { useFold, useWideScreen } from './useWideScreen.ts';
 import { exportFileName, exportSvg } from '../core/exportSvg.ts';
 import { TEMPLATE_LABELS, templateIds } from '../core/layout.ts';
 import { resolvePalette } from '../core/recolor.ts';
@@ -39,6 +40,9 @@ export function Toolbar() {
   const addPalette = useComposition((state) => state.addPalette);
 
   const [paletteText, setPaletteText] = useState('');
+  const wide = useWideScreen();
+  const [scaleOpen, setScaleOpen] = useFold(wide);
+  const [paletteOpen, setPaletteOpen] = useFold(wide);
 
   function onPaletteFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
@@ -81,124 +85,144 @@ export function Toolbar() {
 
   return (
     <header className="toolbar panel">
-      <button type="button" className="seg" onClick={downloadSvg}>
-        Скачать SVG
-      </button>
-      <div className="toolbar__group" role="group" aria-label="Формат кадра">
-        {FORMATS.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            className="seg"
-            aria-pressed={format === entry.id}
-            onClick={() => setFormat(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </div>
-      <div className="toolbar__group" role="group" aria-label="Шаблон">
-        {templateIds().map((id) => (
-          <button
-            key={id}
-            type="button"
-            className="seg"
-            aria-pressed={templateId === id}
-            onClick={() => setTemplate(id)}
-          >
-            {TEMPLATE_LABELS[id]}
-          </button>
-        ))}
-      </div>
-      <div className="toolbar__group" role="group" aria-label="Фон">
-        <button
-          type="button"
-          className="seg"
-          aria-pressed={withBackgrounds}
-          onClick={() => setWithBackgrounds(!withBackgrounds)}
-        >
-          С фоновыми объектами
+      <div className="toolbar__scroll">
+        <button type="button" className="seg" onClick={downloadSvg}>
+          Скачать SVG
         </button>
-      </div>
-      <div className="toolbar__group" role="group" aria-label="Размер">
-        {SIZES.map((entry) => (
+        <div className="toolbar__group" role="group" aria-label="Формат кадра">
+          {FORMATS.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              className="seg"
+              aria-pressed={format === entry.id}
+              onClick={() => setFormat(entry.id)}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+        <div className="toolbar__group" role="group" aria-label="Шаблон">
+          {templateIds().map((id) => (
+            <button
+              key={id}
+              type="button"
+              className="seg"
+              aria-pressed={templateId === id}
+              onClick={() => setTemplate(id)}
+            >
+              {TEMPLATE_LABELS[id]}
+            </button>
+          ))}
+        </div>
+        <div className="toolbar__group" role="group" aria-label="Фон">
           <button
-            key={entry}
             type="button"
             className="seg"
-            aria-pressed={size === entry}
-            onClick={() => setSize(entry)}
+            aria-pressed={withBackgrounds}
+            onClick={() => setWithBackgrounds(!withBackgrounds)}
           >
-            {entry}
+            С фоновыми объектами
           </button>
-        ))}
+        </div>
+        <div className="toolbar__group" role="group" aria-label="Размер">
+          {SIZES.map((entry) => (
+            <button
+              key={entry}
+              type="button"
+              className="seg"
+              aria-pressed={size === entry}
+              onClick={() => setSize(entry)}
+            >
+              {entry}
+            </button>
+          ))}
+        </div>
+        <div
+          className="toolbar__group"
+          role="group"
+          aria-label="Цветовая схема"
+        >
+          {schemes.map((scheme) => (
+            <button
+              key={scheme.id}
+              type="button"
+              className="seg"
+              aria-pressed={paletteId === scheme.id}
+              onClick={() => setPalette(scheme.id)}
+            >
+              {scheme.name}
+            </button>
+          ))}
+          {customPalettes.map((palette) => (
+            <button
+              key={palette.id}
+              type="button"
+              className="seg"
+              aria-pressed={paletteId === palette.id}
+              onClick={() => setPalette(palette.id)}
+            >
+              {palette.name}
+            </button>
+          ))}
+        </div>
       </div>
-      <label className="toolbar__scale">
-        Масштаб
-        <input
-          type="range"
-          min={0.15}
-          max={1.2}
-          step={0.01}
-          aria-label="Масштаб"
-          value={scale}
-          onChange={(event) => setScale(Number(event.currentTarget.value))}
-        />
-      </label>
-      <div className="toolbar__group" role="group" aria-label="Цветовая схема">
-        {schemes.map((scheme) => (
-          <button
-            key={scheme.id}
-            type="button"
-            className="seg"
-            aria-pressed={paletteId === scheme.id}
-            onClick={() => setPalette(scheme.id)}
-          >
-            {scheme.name}
-          </button>
-        ))}
-        {customPalettes.map((palette) => (
-          <button
-            key={palette.id}
-            type="button"
-            className="seg"
-            aria-pressed={paletteId === palette.id}
-            onClick={() => setPalette(palette.id)}
-          >
-            {palette.name}
-          </button>
-        ))}
-      </div>
-      <div className="toolbar__palette-upload">
-        <label className="toolbar__palette-file">
-          <span className="toolbar__palette-file-label">JSON</span>
+      <details
+        className="fold"
+        open={scaleOpen}
+        onToggle={(event) => setScaleOpen(event.currentTarget.open)}
+      >
+        <summary>Масштаб</summary>
+        <label className="toolbar__scale">
+          Масштаб
           <input
-            type="file"
-            accept=".json,application/json"
-            onChange={onPaletteFileChange}
+            type="range"
+            min={0.15}
+            max={1.2}
+            step={0.01}
+            aria-label="Масштаб"
+            value={scale}
+            onChange={(event) => setScale(Number(event.currentTarget.value))}
           />
         </label>
-        <textarea
-          className="toolbar__palette-text"
-          aria-label="Палитра"
-          placeholder="JSON { name, colors } или 8 hex через пробел: bg.base, bg.mid, bg.dark, ink, obj.1, obj.2, obj.3, paper"
-          value={paletteText}
-          onChange={(event) => setPaletteText(event.currentTarget.value)}
-          rows={2}
-        />
-        <button
-          type="button"
-          className="seg toolbar__palette-submit"
-          onClick={() => addPalette(paletteText)}
-        >
-          Загрузить
-        </button>
-        {paletteError ? (
-          <p className="toolbar__palette-error" role="alert">
-            {paletteError}
-          </p>
-        ) : null}
-      </div>
+      </details>
+      <details
+        className="fold"
+        open={paletteOpen}
+        onToggle={(event) => setPaletteOpen(event.currentTarget.open)}
+      >
+        <summary>Палитра JSON</summary>
+        <div className="toolbar__palette-upload">
+          <label className="toolbar__palette-file">
+            <span className="toolbar__palette-file-label">JSON</span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              onChange={onPaletteFileChange}
+            />
+          </label>
+          <textarea
+            className="toolbar__palette-text"
+            aria-label="Палитра"
+            placeholder="JSON { name, colors } или 8 hex через пробел: bg.base, bg.mid, bg.dark, ink, obj.1, obj.2, obj.3, paper"
+            value={paletteText}
+            onChange={(event) => setPaletteText(event.currentTarget.value)}
+            rows={2}
+          />
+          <button
+            type="button"
+            className="seg toolbar__palette-submit"
+            onClick={() => addPalette(paletteText)}
+          >
+            Загрузить
+          </button>
+          {paletteError ? (
+            <p className="toolbar__palette-error" role="alert">
+              {paletteError}
+            </p>
+          ) : null}
+        </div>
+      </details>
     </header>
   );
 }

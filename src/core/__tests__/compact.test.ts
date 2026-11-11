@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import manifest from '../../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../../model/formats.ts';
 import type { FormatId, Manifest, PlacedObject } from '../../model/types.ts';
-import { centerClear } from '../arrange.ts';
 import { ensureBackdrop } from '../backdrop.ts';
 import { composePick, composePlacements } from '../compose.ts';
 import {
@@ -139,7 +138,7 @@ describe('compact layout', () => {
             axisBox(background, scene.scale),
             frame,
           );
-          if (visible < 0.6) {
+          if (visible < 0.38 || visible > 0.62) {
             failures.push(
               `${format} ${ids.join('+')} ${background.objectId} ${visible.toFixed(2)}`,
             );
@@ -150,25 +149,21 @@ describe('compact layout', () => {
     expect(failures).toEqual([]);
   });
 
-  it('packs mains into a tight group that fills a noticeable part of the frame', () => {
-    const scenes: { ids: string[]; span: number }[] = [
-      { ids: ['book', 'phone'], span: 0.45 },
-      { ids: ['book', 'phone', 'puzzle'], span: 0.45 },
-      { ids: ['headphones', 'flowers'], span: 0.45 },
-      { ids: ['folder', 'pen', 'coin'], span: 0.45 },
-      { ids: ['wallet', 'coin'], span: 0.26 },
+  it('packs mains into a tight group and fills the frame with the whole scene', () => {
+    const scenes = [
+      ['book', 'phone'],
+      ['book', 'phone', 'puzzle'],
+      ['headphones', 'flowers'],
+      ['folder', 'pen', 'coin'],
+      ['wallet', 'coin'],
     ];
     const failures: string[] = [];
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
       for (const templateId of ['compact', 'offset'] as const) {
         const template = templateById(templateId, format);
-        for (const sceneCase of scenes) {
-          const scene = layoutScene(
-            objects(sceneCase.ids, format),
-            template,
-            4,
-          );
+        for (const ids of scenes) {
+          const scene = layoutScene(objects(ids, format), template, 4);
           const mains = scene.objects.filter(
             (object) => object.role === 'main',
           );
@@ -177,20 +172,23 @@ describe('compact layout', () => {
           const limit = Math.max(24, frame.w * 0.06);
           if (gap > limit) {
             failures.push(
-              `${format} ${templateId} ${sceneCase.ids.join('+')} gap ${gap.toFixed(0)}`,
+              `${format} ${templateId} ${ids.join('+')} gap ${gap.toFixed(0)}`,
             );
           }
-          const left = Math.min(...boxes.map((box) => box.x));
-          const top = Math.min(...boxes.map((box) => box.y));
-          const right = Math.max(...boxes.map((box) => box.x + box.w));
-          const bottom = Math.max(...boxes.map((box) => box.y + box.h));
+          const all = scene.objects.map((object) =>
+            axisBox(object, scene.scale),
+          );
+          const left = Math.min(...all.map((box) => box.x));
+          const top = Math.min(...all.map((box) => box.y));
+          const right = Math.max(...all.map((box) => box.x + box.w));
+          const bottom = Math.max(...all.map((box) => box.y + box.h));
           const span = Math.max(
             (right - left) / frame.w,
             (bottom - top) / frame.h,
           );
-          if (span < sceneCase.span) {
+          if (span < 0.72) {
             failures.push(
-              `${format} ${templateId} ${sceneCase.ids.join('+')} span ${span.toFixed(2)}`,
+              `${format} ${templateId} ${ids.join('+')} span ${span.toFixed(2)}`,
             );
           }
         }
@@ -236,10 +234,7 @@ describe('compact layout', () => {
         if (background.role !== 'background') continue;
         const box = axisBox(background, named.scale);
         const visible = visibleFraction(box, frame);
-        if (
-          visible < 0.6 ||
-          !centerClear(background, { w: box.w, h: box.h }, frame)
-        ) {
+        if (visible < 0.38 || visible > 0.62) {
           failures.push(
             `names ${format} ${background.objectId} ${visible.toFixed(2)}`,
           );
@@ -261,10 +256,7 @@ describe('compact layout', () => {
         }
         const box = axisBox(lamp, scene.scale);
         const visible = visibleFraction(box, frame);
-        if (
-          visible < 0.6 ||
-          !centerClear(lamp, { w: box.w, h: box.h }, frame)
-        ) {
+        if (visible < 0.38 || visible > 0.62) {
           failures.push(
             `meaning ${format} ${template} ${visible.toFixed(2)} @${lamp.x.toFixed(0)},${lamp.y.toFixed(0)}`,
           );

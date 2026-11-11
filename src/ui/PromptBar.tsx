@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useFold, useWideScreen } from './useWideScreen.ts';
 import manifest from '../library/manifest.json' with { type: 'json' };
 import type { Manifest } from '../model/types.ts';
 import { useComposition } from '../store/useComposition.ts';
@@ -39,6 +40,8 @@ export function PromptBar() {
   const matches = nameQuery?.matches ?? [];
   const unknown = nameQuery?.unknown ?? [];
   const meaning = mode === 'meaning';
+  const wide = useWideScreen();
+  const [modeOpen, setModeOpen] = useFold(wide);
 
   return (
     <section
@@ -46,7 +49,12 @@ export function PromptBar() {
       aria-label="Сборка"
       aria-busy={metaphorPending}
     >
-      <form className="prompt__form" onSubmit={onSubmit}>
+      <details
+        className="fold"
+        open={modeOpen}
+        onToggle={(event) => setModeOpen(event.currentTarget.open)}
+      >
+        <summary>Режим</summary>
         <div className="toolbar__group" role="group" aria-label="Режим сборки">
           <button
             type="button"
@@ -65,6 +73,8 @@ export function PromptBar() {
             Смысл
           </button>
         </div>
+      </details>
+      <form className="prompt__form" onSubmit={onSubmit}>
         <input
           type="text"
           className="prompt__input"
