@@ -19,7 +19,7 @@ export type TemplateId = LayoutTemplate['id'];
 export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   'under-title': 'Под заголовком',
   offset: 'Со смещением',
-  compact: 'Собранно',
+  compact: 'Плотно',
 };
 
 const TEMPLATE_IDS: TemplateId[] = ['under-title', 'offset', 'compact'];
