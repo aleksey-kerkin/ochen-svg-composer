@@ -7,14 +7,10 @@ import type {
   Slot2D,
 } from '../model/types.ts';
 import {
-  anchorGroup,
   arrangeMains,
+  frameCloseUp,
   orderByDepth,
   placeEdgeBackgrounds,
-  groupAspect,
-  keepReadable,
-  scaleMainsToFill,
-  seatBackgrounds,
 } from './arrange.ts';
 import { axisBox, crossesFrame } from './geometry.ts';
 
@@ -270,17 +266,17 @@ export interface LaidOutScene {
 }
 
 /**
- * L is a close-up: the main group covers about the whole limiting side and
- * may bleed. S stays a step smaller, still most of that side.
+ * L sizes the hero to about 82% of the frame's limiting side (the middle of
+ * 75–90%). S is about 72% (the middle of 65–80%). The hero may bleed.
  */
 export function groupFillTarget(size: Size): number {
-  return size === 'S' ? 0.85 : 1;
+  return size === 'S' ? 0.72 : 0.82;
 }
 
 /**
- * Scales the main group so its limiting side is about 85% (S) or 100% (L)
- * of the frame, which may bleed. Backgrounds then sit on the isometric
- * diagonal beside that group and may crop, but not below half their box.
+ * Sizes the hero first, then seats at most one secondary tight against it
+ * (two on landscape). Secondaries share the hero's scale and are cropped by
+ * the frame to about half their box. Riders stay on their support.
  */
 export function layoutScene(
   objects: PlacedObject[],
@@ -288,25 +284,18 @@ export function layoutScene(
   seed: number,
   size: Size = 'L',
 ): LaidOutScene {
-  const frame = FORMATS[template.format];
   const target = groupFillTarget(size);
   const base = layout(objects, template, seed);
   const mains = base
     .filter((object) => object.role === 'main')
     .map((object) => ({ ...object }));
-  const backgroundRef = base.filter((object) => object.role === 'background');
-  const backgrounds = seatBackgrounds(
-    backgroundRef,
-    mains,
-    template.scale,
-    frame,
-    groupAspect(template, frame),
-  );
-  const scene = [...mains, ...backgrounds];
-  const scale = scaleMainsToFill(scene, template.scale, frame, target);
-  anchorGroup(scene, template, frame, scale);
-  keepReadable(scene, scale, frame, template);
-  return { scale, objects: orderByDepth(backgrounds, mains, scale) };
+  if (mains.length === 0) {
+    return { scale: template.scale, objects: base };
+  }
+  const backgrounds = base
+    .filter((object) => object.role === 'background')
+    .map((object) => ({ ...object }));
+  return frameCloseUp(mains, backgrounds, template, template.scale, target);
 }
 
 /** Puts every scene object into the template. Mains are not dropped. */

@@ -156,7 +156,7 @@ describe('placement geometry', () => {
     }
   });
 
-  it('adds cropped monochrome backgrounds behind named mains', () => {
+  it('crops one background beside a hero and skips it when the square is full', () => {
     const placed = composePlacements(
       [
         { objectId: 'book', count: 1 },
@@ -165,27 +165,45 @@ describe('placement geometry', () => {
       ],
       { format: 'square', seed: 1 },
     );
-    const named = new Set(['book', 'phone', 'puzzle']);
     const mains = placed.objects.filter((object) => object.role === 'main');
-    const backgrounds = placed.objects.filter(
-      (object) => object.role === 'background',
-    );
     expect(mains.map((object) => object.objectId).sort()).toEqual([
       'book',
       'phone',
       'puzzle',
     ]);
+    expect(
+      placed.objects.filter((object) => object.role === 'background'),
+    ).toHaveLength(0);
+    expectMains(placed.objects, placed.scale);
+
+    const close = composePlacements(
+      [
+        { objectId: 'book', count: 1 },
+        { objectId: 'pen', count: 1 },
+      ],
+      { format: 'landscape', seed: 1 },
+    );
+    const closeMains = close.objects.filter((object) => object.role === 'main');
+    const backgrounds = close.objects.filter(
+      (object) => object.role === 'background',
+    );
     expect(backgrounds.length).toBeGreaterThanOrEqual(1);
     expect(backgrounds.length).toBeLessThanOrEqual(2);
-    const frame = FORMATS.square;
+    const frame = FORMATS.landscape;
     for (const object of backgrounds) {
-      expect(named.has(object.objectId)).toBe(false);
-      expect(object.z).toBeLessThan(Math.min(...mains.map((entry) => entry.z)));
+      expect(object.objectId === 'book' || object.objectId === 'pen').toBe(
+        false,
+      );
+      expect(object.z).toBeLessThan(
+        Math.min(...closeMains.map((entry) => entry.z)),
+      );
       expect(
-        visibleFraction(axisBox(object, placed.scale), frame),
-      ).toBeGreaterThanOrEqual(0.5);
+        visibleFraction(axisBox(object, close.scale), frame),
+      ).toBeGreaterThanOrEqual(0.38);
+      expect(
+        visibleFraction(axisBox(object, close.scale), frame),
+      ).toBeLessThanOrEqual(0.62);
     }
-    expectMains(placed.objects, placed.scale);
   });
 
   it('can compose without background objects', () => {

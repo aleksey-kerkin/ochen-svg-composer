@@ -193,7 +193,7 @@ describe('composition reducer', () => {
     });
     const next = reduceComposition(turned, { type: 'setSize', size: 'S' });
     expect(next.size).toBe('S');
-    expect(next.scale).toBeCloseTo(turned.scale * (0.85 / 1), 5);
+    expect(next.scale).toBeCloseTo(turned.scale * (0.72 / 0.82), 5);
     expect(byUid(next, uid).x).toBe(byUid(turned, uid).x);
     expect(byUid(next, uid).y).toBe(byUid(turned, uid).y);
     expect(byUid(next, uid).rotation).toBe(20);
@@ -428,7 +428,7 @@ describe('useComposition', () => {
         .sort(),
     ).toEqual(['flowers', 'headphones']);
     expect(placed.objects.some((object) => object.role === 'background')).toBe(
-      true,
+      false,
     );
     expect(placed.nameQuery?.unknown).toEqual([]);
     const uid = placed.objects[0]?.uid ?? '';

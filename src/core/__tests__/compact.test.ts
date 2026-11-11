@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import manifest from '../../library/manifest.json' with { type: 'json' };
 import { FORMATS } from '../../model/formats.ts';
 import type { FormatId, Manifest, PlacedObject } from '../../model/types.ts';
-import { centerClear } from '../arrange.ts';
 import { ensureBackdrop } from '../backdrop.ts';
 import { composePick, composePlacements } from '../compose.ts';
 import {
@@ -139,7 +138,7 @@ describe('compact layout', () => {
             axisBox(background, scene.scale),
             frame,
           );
-          if (visible < 0.5) {
+          if (visible < 0.38 || visible > 0.62) {
             failures.push(
               `${format} ${ids.join('+')} ${background.objectId} ${visible.toFixed(2)}`,
             );
@@ -235,10 +234,7 @@ describe('compact layout', () => {
         if (background.role !== 'background') continue;
         const box = axisBox(background, named.scale);
         const visible = visibleFraction(box, frame);
-        if (
-          visible < 0.5 ||
-          !centerClear(background, { w: box.w, h: box.h }, frame)
-        ) {
+        if (visible < 0.38 || visible > 0.62) {
           failures.push(
             `names ${format} ${background.objectId} ${visible.toFixed(2)}`,
           );
@@ -260,10 +256,7 @@ describe('compact layout', () => {
         }
         const box = axisBox(lamp, scene.scale);
         const visible = visibleFraction(box, frame);
-        if (
-          visible < 0.5 ||
-          !centerClear(lamp, { w: box.w, h: box.h }, frame)
-        ) {
+        if (visible < 0.38 || visible > 0.62) {
           failures.push(
             `meaning ${format} ${template} ${visible.toFixed(2)} @${lamp.x.toFixed(0)},${lamp.y.toFixed(0)}`,
           );

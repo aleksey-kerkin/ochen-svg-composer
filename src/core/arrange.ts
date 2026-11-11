@@ -990,3 +990,801 @@ export function orderByDepth(
   });
   return ordered;
 }
+
+type CropSide = 'left' | 'right' | 'above' | 'below';
+
+const HERO_MIN = 0.7;
+const CROP_TARGET = 0.5;
+
+function scaleAbout(
+  object: PlacedObject,
+  origin: { x: number; y: number },
+  factor: number,
+): void {
+  object.x = origin.x + (object.x - origin.x) * factor;
+  object.y = origin.y + (object.y - origin.y) * factor;
+}
+
+function sideFor(template: LayoutTemplate, index: number): CropSide {
+  const wide =
+    template.format === 'landscape' ||
+    (template.id === 'under-title' && template.format === 'square');
+  if (wide) return index === 0 ? 'left' : 'right';
+  return 'below';
+}
+
+function flushCenter(
+  side: CropSide,
+  union: Box,
+  size: { w: number; h: number },
+  gap: number,
+): { x: number; y: number } {
+  const midX = union.x + union.w / 2;
+  const midY = union.y + union.h / 2;
+  if (side === 'left') {
+    return { x: union.x - gap - size.w / 2, y: midY };
+  }
+  if (side === 'right') {
+    return { x: union.x + union.w + gap + size.w / 2, y: midY };
+  }
+  if (side === 'above') {
+    return { x: midX, y: union.y - gap - size.h / 2 };
+  }
+  return { x: midX, y: union.y + union.h + gap + size.h / 2 };
+}
+
+/** Nudges along the shared edge so the pair reads as a diagonal, still touching. */
+function stagger(
+  side: CropSide,
+  union: Box,
+  size: { w: number; h: number },
+  center: { x: number; y: number },
+): { x: number; y: number } {
+  if (side === 'left' || side === 'right') {
+    const limit = (union.h + size.h) / 2 - Math.min(union.h, size.h) * 0.35;
+    const dy = (side === 'left' ? 1 : -1) * Math.max(0, limit) * 0.5;
+    return { x: center.x, y: center.y + dy };
+  }
+  const limit = (union.w + size.w) / 2 - Math.min(union.w, size.w) * 0.35;
+  const dx = (side === 'below' ? -1 : 1) * Math.max(0, limit) * 0.5;
+  return { x: center.x + dx, y: center.y };
+}
+
+const SIDES: CropSide[] = ['left', 'right', 'below', 'above'];
+
+function heroFactor(
+  hero: PlacedObject,
+  fromScale: number,
+  frame: { w: number; h: number },
+  target: number,
+): number {
+  const box = axisBox(hero, fromScale);
+  if (box.w < 1 || box.h < 1) return 1;
+  return target * Math.min(frame.w / box.w, frame.h / box.h);
+}
+
+function parkHero(
+  cluster: PlacedObject[],
+  hero: PlacedObject,
+  scale: number,
+  frame: { w: number; h: number },
+  template: LayoutTemplate,
+): void {
+  const box = axisBox(hero, scale);
+  let tx = frame.w / 2;
+  let ty = frame.h / 2;
+  if (template.id === 'under-title') ty = frame.h * 0.62;
+  if (template.id === 'offset') {
+    tx = frame.w * 0.4;
+    ty = frame.h * 0.58;
+  }
+  translate(cluster, tx - (box.x + box.w / 2), ty - (box.y + box.h / 2));
+  if (!template.safeArea) return;
+  const floor = (template.safeArea.y + template.safeArea.h) * frame.h + 1;
+  const highest = Math.min(...cluster.map((object) => object.y));
+  if (highest >= floor) return;
+  translate(cluster, 0, floor - highest);
+  if (visibleFraction(axisBox(hero, scale), frame) >= HERO_MIN - 1e-3) {
+    return;
+  }
+  translate(cluster, 0, highest - floor);
+}
+
+function glueLead(
+  lead: PlacedObject,
+  riders: PlacedObject[],
+  blockers: PlacedObject[],
+  scale: number,
+  side: CropSide,
+): void {
+  const size = renderedSize(lead, scale);
+  const union = unionBox(blockers.map((object) => axisBox(object, scale)));
+  const spot = stagger(side, union, size, flushCenter(side, union, size, GAP));
+  const dx = spot.x - lead.x;
+  const dy = spot.y - lead.y;
+  lead.x = spot.x;
+  lead.y = spot.y;
+  lead.rotation = 0;
+  translate(riders, dx, dy);
+}
+
+/** Slides the hero and the companion together until the companion is about half in frame. */
+function pullIntoBand(
+  lead: PlacedObject,
+  moving: PlacedObject[],
+  hero: PlacedObject,
+  guards: PlacedObject[],
+  scale: number,
+  frame: { w: number; h: number },
+  template: LayoutTemplate,
+): boolean {
+  const start = moving.map((object) => ({ object, x: object.x, y: object.y }));
+  const restore = () => {
+    for (const item of start) {
+      item.object.x = item.x;
+      item.object.y = item.y;
+    }
+  };
+  const box = axisBox(lead, scale);
+  const overflowLeft = Math.max(0, -box.x);
+  const overflowRight = Math.max(0, box.x + box.w - frame.w);
+  const overflowTop = Math.max(0, -box.y);
+  const overflowBottom = Math.max(0, box.y + box.h - frame.h);
+  const horizontal =
+    overflowLeft + overflowRight >= overflowTop + overflowBottom;
+  const outward = horizontal
+    ? overflowRight >= overflowLeft
+      ? 1
+      : -1
+    : overflowBottom >= overflowTop
+      ? 1
+      : -1;
+  const sign = visibleFraction(box, frame) < CROP_TARGET ? -outward : outward;
+  const floor = template.safeArea
+    ? (template.safeArea.y + template.safeArea.h) * frame.h + 1
+    : Number.NEGATIVE_INFINITY;
+  let best: number | null = null;
+  for (let step = 0; step <= 120; step += 1) {
+    const delta = sign * step * 4;
+    for (const item of start) {
+      item.object.x = item.x + (horizontal ? delta : 0);
+      item.object.y = item.y + (horizontal ? 0 : delta);
+    }
+    if (visibleFraction(axisBox(hero, scale), frame) < HERO_MIN - 1e-3) {
+      continue;
+    }
+    if (moving.some((object) => object.role === 'main' && object.y < floor)) {
+      continue;
+    }
+    if (
+      guards.some(
+        (object) =>
+          !showsEnough(object, visibleFraction(axisBox(object, scale), frame)),
+      )
+    ) {
+      continue;
+    }
+    const value = visibleFraction(axisBox(lead, scale), frame);
+    if (!inBand(value)) continue;
+    if (best === null || Math.abs(delta) < Math.abs(best)) best = delta;
+  }
+  if (best === null) {
+    restore();
+    return false;
+  }
+  for (const item of start) {
+    item.object.x = item.x + (horizontal ? best : 0);
+    item.object.y = item.y + (horizontal ? 0 : best);
+  }
+  return true;
+}
+
+function inBand(value: number): boolean {
+  return value >= 0.38 && value <= 0.62;
+}
+
+/** Backgrounds stay half in frame. A named main may show more, but not a sliver. */
+function showsEnough(object: PlacedObject, value: number): boolean {
+  if (object.role === 'background') return inBand(value);
+  return value >= 0.38;
+}
+
+function restsClean(objects: PlacedObject[], scale: number): boolean {
+  const mains = objects.filter((object) => object.role === 'main');
+  for (let left = 0; left < mains.length; left += 1) {
+    for (let right = left + 1; right < mains.length; right += 1) {
+      const a = mains[left];
+      const b = mains[right];
+      if (!a || !b) continue;
+      if (!intersection(axisBox(a, scale), axisBox(b, scale))) continue;
+      const rider = canRest(a.objectId, b.objectId)
+        ? a
+        : canRest(b.objectId, a.objectId)
+          ? b
+          : undefined;
+      const support = rider === a ? b : rider === b ? a : undefined;
+      if (
+        !rider ||
+        !support ||
+        !contains(
+          faceOf(support.objectId, axisBox(support, scale)),
+          axisBox(rider, scale),
+        )
+      ) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function problemCount(
+  objects: PlacedObject[],
+  scale: number,
+  template: LayoutTemplate,
+): number {
+  const frame = FORMATS[template.format];
+  const floor = template.safeArea
+    ? (template.safeArea.y + template.safeArea.h) * frame.h - 1
+    : Number.NEGATIVE_INFINITY;
+  let problems = 0;
+  for (const object of objects) {
+    if (object.role !== 'main') continue;
+    if (object.y < floor) problems += 1;
+    if (visibleFraction(axisBox(object, scale), frame) < 0.38) problems += 1;
+  }
+  if (!restsClean(objects, scale)) problems += 1;
+  return problems;
+}
+
+/**
+ * Hero first: its box covers `target` of the frame's limiting side. Up to one
+ * companion on a square or portrait, and two on landscape, sit tight against
+ * that hero and are cropped to about half. Every named main stays. A crowded
+ * frame steps the hero down, still inside the allowed band, until the mains fit.
+ */
+export function frameCloseUp(
+  mains: PlacedObject[],
+  backgrounds: PlacedObject[],
+  template: LayoutTemplate,
+  fromScale: number,
+  target: number,
+): { scale: number; objects: PlacedObject[] } {
+  const floor = target - 0.18;
+  let chosen: { scale: number; objects: PlacedObject[] } | null = null;
+  let chosenProblems = Number.POSITIVE_INFINITY;
+  for (let attempt = target; attempt >= floor - 1e-9; attempt -= 0.02) {
+    const result = closeUpOnce(
+      mains.map((object) => ({ ...object })),
+      backgrounds.map((object) => ({ ...object })),
+      template,
+      fromScale,
+      attempt,
+    );
+    const problems = problemCount(result.objects, result.scale, template);
+    if (
+      problems < chosenProblems ||
+      (problems === chosenProblems && chosen === null)
+    ) {
+      chosen = result;
+      chosenProblems = problems;
+    }
+    if (problems === 0) return result;
+  }
+  return chosen ?? closeUpOnce(mains, backgrounds, template, fromScale, target);
+}
+
+function closeUpOnce(
+  mains: PlacedObject[],
+  backgrounds: PlacedObject[],
+  template: LayoutTemplate,
+  fromScale: number,
+  target: number,
+): { scale: number; objects: PlacedObject[] } {
+  const frame = FORMATS[template.format];
+  const hero = mains.reduce((best, object) =>
+    areaOf(object, fromScale) > areaOf(best, fromScale) ? object : best,
+  );
+  const ridersOf = (support: PlacedObject) => riderSnapshot.get(support) ?? [];
+  const riderSnapshot = new Map<PlacedObject, PlacedObject[]>(
+    mains.map((support) => [
+      support,
+      mains.filter(
+        (object) => object !== support && restsOn(object, support, fromScale),
+      ),
+    ]),
+  );
+  const riders = ridersOf(hero);
+  const independents = mains.filter(
+    (object) =>
+      object !== hero &&
+      !riders.includes(object) &&
+      !mains.some(
+        (support) => support !== hero && restsOn(object, support, fromScale),
+      ),
+  );
+  const slots = template.format === 'landscape' ? 2 : 1;
+  const factor = heroFactor(hero, fromScale, frame, target);
+  const scale = fromScale * factor;
+  const cluster = [hero, ...riders];
+  const origin = { x: hero.x, y: hero.y };
+  const crowdBefore = independents.length > slots;
+  if (crowdBefore) {
+    for (const object of mains) scaleAbout(object, origin, factor);
+  } else {
+    for (const object of cluster) scaleAbout(object, origin, factor);
+    for (const independent of independents) {
+      const around = { x: independent.x, y: independent.y };
+      for (const rider of ridersOf(independent)) {
+        scaleAbout(rider, around, factor);
+      }
+    }
+  }
+  parkHero(crowdBefore ? mains : cluster, hero, scale, frame, template);
+  const attached = new Map<PlacedObject, PlacedObject>();
+  for (const object of independents) {
+    const support = [hero, ...independents].find(
+      (candidate) =>
+        candidate !== object &&
+        !attached.has(candidate) &&
+        canRest(object.objectId, candidate.objectId) &&
+        areaOf(candidate, fromScale) >= areaOf(object, fromScale),
+    );
+    if (!support) continue;
+    const face = faceOf(support.objectId, axisBox(support, scale));
+    object.rotation = 0;
+    object.x = face.x + face.w / 2;
+    object.y = face.y + face.h / 2;
+    if (!restsOn(object, support, scale)) continue;
+    const box = axisBox(object, scale);
+    const blocked = mains.filter(
+      (other) => other !== object && other !== support,
+    );
+    if (
+      blocked.some((other) => intersection(box, axisBox(other, scale)) !== null)
+    ) {
+      continue;
+    }
+    attached.set(object, support);
+  }
+  const free = independents.filter((object) => !attached.has(object));
+  const crowd = free.length > 2 && free.length > slots;
+  const followersOf = (support: PlacedObject) => [
+    ...ridersOf(support),
+    ...[...attached.entries()]
+      .filter(([, candidate]) => candidate === support)
+      .map(([rider]) => rider),
+  ];
+
+  const placed: PlacedObject[] = [];
+  const omitted = new Set<PlacedObject>();
+  const parked = new Set<PlacedObject>([
+    ...cluster,
+    ...[...attached.keys()].filter((rider) => !free.includes(rider)),
+  ]);
+  const queue: PlacedObject[] = crowd
+    ? []
+    : [
+        ...[...free].sort(
+          (left, right) => areaOf(right, fromScale) - areaOf(left, fromScale),
+        ),
+        ...[...backgrounds].sort(
+          (left, right) => areaOf(right, fromScale) - areaOf(left, fromScale),
+        ),
+      ];
+  for (const lead of queue) {
+    if (placed.length >= slots) {
+      if (lead.role === 'main') {
+        omitted.add(lead);
+        for (const [rider, support] of attached) {
+          if (support === lead) omitted.add(rider);
+        }
+      }
+      continue;
+    }
+    const followers = lead.role === 'main' ? followersOf(lead) : [];
+    const blockers = [...parked];
+    const saved = new Map(
+      [...blockers, lead, ...followers].map((object) => [
+        object,
+        { x: object.x, y: object.y },
+      ]),
+    );
+    const restore = () => {
+      for (const [object, previous] of saved) {
+        object.x = previous.x;
+        object.y = previous.y;
+      }
+    };
+    let fitted = false;
+    const prefer = sideFor(template, placed.length);
+    const sides = [prefer, ...SIDES.filter((side) => side !== prefer)];
+    for (const side of sides) {
+      restore();
+      glueLead(lead, followers, blockers, scale, side);
+      trimToBand(lead, blockers, followers, scale, frame);
+      dropBelowTitle(lead, blockers, followers, scale, template);
+      if (!showsEnough(lead, visibleFraction(axisBox(lead, scale), frame))) {
+        pullIntoBand(
+          lead,
+          [...blockers, lead, ...followers],
+          hero,
+          placed.flatMap((object) => [
+            object,
+            ...(object.role === 'main' ? ridersOf(object) : []),
+          ]),
+          scale,
+          frame,
+          template,
+        );
+      }
+      const box = axisBox(lead, scale);
+      const visible = visibleFraction(box, frame);
+      const hits = blockers.some(
+        (object) => intersection(box, axisBox(object, scale)) !== null,
+      );
+      const gap = gapBetween(
+        box,
+        unionBox(blockers.map((object) => axisBox(object, scale))),
+      );
+      const titled =
+        template.safeArea !== undefined &&
+        [lead, ...followers].some(
+          (object) =>
+            object.role === 'main' &&
+            object.y <
+              (template.safeArea!.y + template.safeArea!.h) * frame.h + 1,
+        );
+      if (!hits && gap <= 18 && showsEnough(lead, visible) && !titled) {
+        fitted = true;
+        break;
+      }
+    }
+    if (
+      !fitted &&
+      lead.role === 'main' &&
+      placeLoose(lead, followers, blockers, scale, frame, template)
+    ) {
+      fitted = true;
+    }
+    if (!fitted) {
+      restore();
+      if (lead.role === 'main') {
+        omitted.add(lead);
+        for (const [rider, support] of attached) {
+          if (support === lead) omitted.add(rider);
+        }
+      }
+      continue;
+    }
+    parked.add(lead);
+    for (const rider of followers) parked.add(rider);
+    if (fitted) {
+      const heroCluster = [hero, ...riders];
+      for (const earlier of placed) {
+        reseatCompanion(
+          earlier,
+          earlier.role === 'main' ? followersOf(earlier) : [],
+          heroCluster,
+          [
+            lead,
+            ...followers,
+            ...placed.filter((object) => object !== earlier),
+          ],
+          scale,
+          frame,
+          template,
+        );
+      }
+      placed.push(lead);
+    }
+  }
+
+  if (crowd) {
+    const extras = [...backgrounds].sort(
+      (left, right) => areaOf(right, fromScale) - areaOf(left, fromScale),
+    );
+    for (const lead of extras) {
+      if (placed.length >= slots) break;
+      const blockers = mains;
+      const prefer = sideFor(template, placed.length);
+      const sides = [prefer, ...SIDES.filter((side) => side !== prefer)];
+      let fitted = false;
+      for (const side of sides) {
+        glueLead(lead, [], blockers, scale, side);
+        trimToBand(lead, blockers, [], scale, frame);
+        const box = axisBox(lead, scale);
+        const visible = visibleFraction(box, frame);
+        const hits = blockers.some(
+          (object) => intersection(box, axisBox(object, scale)) !== null,
+        );
+        const gap = gapBetween(
+          box,
+          unionBox(blockers.map((object) => axisBox(object, scale))),
+        );
+        if (!hits && gap <= 14 && inBand(visible)) {
+          fitted = true;
+          break;
+        }
+      }
+      if (fitted) placed.push(lead);
+    }
+  }
+
+  const keptMains = mains.filter((object) => !omitted.has(object));
+  for (const rider of keptMains) {
+    const support = keptMains.find(
+      (other) => other !== rider && restsOn(rider, other, scale),
+    );
+    if (support) settleRider(rider, support, scale, frame);
+  }
+  const keptBackgrounds = placed.filter((object) => {
+    if (object.role !== 'background') return false;
+    const box = axisBox(object, scale);
+    return !keptMains.some(
+      (main) => intersection(box, axisBox(main, scale)) !== null,
+    );
+  });
+  return {
+    scale,
+    objects: orderByDepth(keptBackgrounds, keptMains, scale),
+  };
+}
+
+/** Slides a rider inside its support face toward the part that is on screen. */
+function settleRider(
+  rider: PlacedObject,
+  support: PlacedObject,
+  scale: number,
+  frame: { w: number; h: number },
+): void {
+  const face = faceOf(support.objectId, axisBox(support, scale));
+  const size = renderedSize(rider, scale);
+  const minX = face.x + size.w / 2;
+  const maxX = face.x + face.w - size.w / 2;
+  const minY = face.y + size.h / 2;
+  const maxY = face.y + face.h - size.h / 2;
+  if (minX > maxX || minY > maxY) return;
+  let bestX = rider.x;
+  let bestY = rider.y;
+  let bestVis = visibleFraction(axisBox(rider, scale), frame);
+  for (let x = minX; x <= maxX; x += 10) {
+    for (let y = minY; y <= maxY; y += 10) {
+      rider.x = x;
+      rider.y = y;
+      const value = visibleFraction(axisBox(rider, scale), frame);
+      if (value > bestVis) {
+        bestVis = value;
+        bestX = x;
+        bestY = y;
+      }
+    }
+  }
+  rider.x = bestX;
+  rider.y = bestY;
+}
+
+/** Puts a companion back on the hero after a later companion shifted the group. */
+function reseatCompanion(
+  lead: PlacedObject,
+  followers: PlacedObject[],
+  heroCluster: PlacedObject[],
+  others: PlacedObject[],
+  scale: number,
+  frame: { w: number; h: number },
+  template: LayoutTemplate,
+): void {
+  const saved = new Map(
+    [lead, ...followers].map((object) => [
+      object,
+      { x: object.x, y: object.y },
+    ]),
+  );
+  const restore = () => {
+    for (const [object, previous] of saved) {
+      object.x = previous.x;
+      object.y = previous.y;
+    }
+  };
+  const floor = template.safeArea
+    ? (template.safeArea.y + template.safeArea.h) * frame.h + 1
+    : Number.NEGATIVE_INFINITY;
+  const prefer = sideFor(template, 0);
+  const sides = [prefer, ...SIDES.filter((side) => side !== prefer)];
+  for (const side of sides) {
+    restore();
+    glueLead(lead, followers, heroCluster, scale, side);
+    const blockers = [...heroCluster, ...others];
+    trimToBand(lead, blockers, followers, scale, frame);
+    dropBelowTitle(lead, blockers, followers, scale, template);
+    const box = axisBox(lead, scale);
+    const visible = visibleFraction(box, frame);
+    const hits = blockers.some(
+      (object) => intersection(box, axisBox(object, scale)) !== null,
+    );
+    const gap = gapBetween(
+      box,
+      unionBox(heroCluster.map((object) => axisBox(object, scale))),
+    );
+    const titled =
+      lead.role === 'main' &&
+      [lead, ...followers].some(
+        (object) => object.role === 'main' && object.y < floor,
+      );
+    if (!hits && gap <= 18 && inBand(visible) && !titled) return;
+  }
+  restore();
+}
+
+/** Last resort: any non-overlapping spot that keeps a named main readable. */
+function placeLoose(
+  lead: PlacedObject,
+  followers: PlacedObject[],
+  blockers: PlacedObject[],
+  scale: number,
+  frame: { w: number; h: number },
+  template: LayoutTemplate,
+): boolean {
+  const start = [lead, ...followers].map((object) => ({
+    object,
+    x: object.x,
+    y: object.y,
+  }));
+  const restore = () => {
+    for (const item of start) {
+      item.object.x = item.x;
+      item.object.y = item.y;
+    }
+  };
+  const floor = template.safeArea
+    ? (template.safeArea.y + template.safeArea.h) * frame.h + 1
+    : Number.NEGATIVE_INFINITY;
+  let best: {
+    x: number;
+    y: number;
+    riders: { x: number; y: number }[];
+  } | null = null;
+  let bestGap = Number.POSITIVE_INFINITY;
+  for (const side of SIDES) {
+    restore();
+    glueLead(lead, followers, blockers, scale, side);
+    const anchor = followers.map((object) => ({
+      dx: object.x - lead.x,
+      dy: object.y - lead.y,
+    }));
+    const sx = lead.x;
+    const sy = lead.y;
+    const horizontal = side === 'left' || side === 'right';
+    const outward = side === 'left' || side === 'above' ? -1 : 1;
+    const limit = Math.max(frame.w, frame.h);
+    for (let along = -limit; along <= limit; along += 16) {
+      for (let out = 0; out <= limit; out += 16) {
+        lead.x = sx + (horizontal ? outward * out : along);
+        lead.y = sy + (horizontal ? along : outward * out);
+        followers.forEach((object, index) => {
+          const shift = anchor[index];
+          if (!shift) return;
+          object.x = lead.x + shift.dx;
+          object.y = lead.y + shift.dy;
+        });
+        if (
+          [lead, ...followers].some(
+            (object) => object.role === 'main' && object.y < floor,
+          )
+        ) {
+          continue;
+        }
+        const box = axisBox(lead, scale);
+        if (
+          blockers.some(
+            (object) => intersection(box, axisBox(object, scale)) !== null,
+          )
+        ) {
+          continue;
+        }
+        if (visibleFraction(box, frame) < 0.38) continue;
+        const gap = gapBetween(
+          box,
+          unionBox(blockers.map((object) => axisBox(object, scale))),
+        );
+        if (gap < bestGap) {
+          bestGap = gap;
+          best = {
+            x: lead.x,
+            y: lead.y,
+            riders: followers.map((object) => ({ x: object.x, y: object.y })),
+          };
+        }
+      }
+    }
+  }
+  if (!best) {
+    restore();
+    return false;
+  }
+  lead.x = best.x;
+  lead.y = best.y;
+  followers.forEach((object, index) => {
+    const spot = best?.riders[index];
+    if (!spot) return;
+    object.x = spot.x;
+    object.y = spot.y;
+  });
+  return true;
+}
+
+/** Slides a companion down along the contact until its center clears the title. */
+function dropBelowTitle(
+  lead: PlacedObject,
+  blockers: PlacedObject[],
+  followers: PlacedObject[],
+  scale: number,
+  template: LayoutTemplate,
+): void {
+  if (!template.safeArea || lead.role !== 'main') return;
+  const frame = FORMATS[template.format];
+  const floor = (template.safeArea.y + template.safeArea.h) * frame.h + 1;
+  if (lead.y >= floor) return;
+  const union = unionBox(blockers.map((object) => axisBox(object, scale)));
+  const startY = lead.y;
+  let best = 0;
+  for (let offset = 0; offset <= frame.h; offset += 2) {
+    lead.y = startY + offset;
+    const box = axisBox(lead, scale);
+    const hits = blockers.some(
+      (object) => intersection(box, axisBox(object, scale)) !== null,
+    );
+    if (hits || gapBetween(box, union) > 18) continue;
+    if (lead.y >= floor) {
+      best = offset;
+      break;
+    }
+  }
+  const shift = best;
+  lead.y = startY + shift;
+  for (const rider of followers) rider.y += shift;
+}
+
+function trimToBand(
+  lead: PlacedObject,
+  blockers: PlacedObject[],
+  followers: PlacedObject[],
+  scale: number,
+  frame: { w: number; h: number },
+): void {
+  const startX = lead.x;
+  const startY = lead.y;
+  const union = unionBox(blockers.map((object) => axisBox(object, scale)));
+  const initial = axisBox(lead, scale);
+  const beside =
+    initial.x + initial.w <= union.x + 1 || initial.x >= union.x + union.w - 1;
+  const axis: 'x' | 'y' = beside ? 'y' : 'x';
+  const span = axis === 'y' ? frame.h : frame.w;
+  let bestOffset = 0;
+  let bestScore = Number.POSITIVE_INFINITY;
+  for (let offset = -span; offset <= span; offset += 4) {
+    lead.x = startX + (axis === 'x' ? offset : 0);
+    lead.y = startY + (axis === 'y' ? offset : 0);
+    const box = axisBox(lead, scale);
+    const hits = blockers.some(
+      (object) => intersection(box, axisBox(object, scale)) !== null,
+    );
+    const gap = gapBetween(box, union);
+    if (hits || gap > 14) continue;
+    const value = visibleFraction(box, frame);
+    const outside = value >= 0.4 && value <= 0.6 ? 0 : value < 0.38 ? 2 : 1;
+    const score = outside * 10 + Math.abs(value - CROP_TARGET);
+    if (score < bestScore) {
+      bestScore = score;
+      bestOffset = offset;
+    }
+  }
+  const dx = axis === 'x' ? bestOffset : 0;
+  const dy = axis === 'y' ? bestOffset : 0;
+  lead.x = startX + dx;
+  lead.y = startY + dy;
+  for (const rider of followers) {
+    rider.x += dx;
+    rider.y += dy;
+  }
+}

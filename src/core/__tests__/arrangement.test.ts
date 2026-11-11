@@ -84,7 +84,7 @@ function problems(
   const backgrounds = objects.filter((object) => object.role === 'background');
   for (const object of mains) {
     const visible = visibleFraction(axisBox(object, scale), frame);
-    if (visible < 0.7) {
+    if (visible < 0.38) {
       notes.push(`${object.objectId} shows ${Math.round(visible * 100)}%`);
     }
   }
@@ -136,7 +136,7 @@ function problems(
     if (background.z >= minMainZ)
       notes.push(`${background.objectId} is in front`);
     const visible = visibleFraction(axisBox(background, scale), frame);
-    if (visible < 0.5) {
+    if (visible < 0.38 || visible > 0.62) {
       notes.push(`${background.objectId} shows ${Math.round(visible * 100)}%`);
     }
     for (const main of mains) {

@@ -182,7 +182,8 @@ describe('layout', () => {
           },
           frame,
         );
-        expect(visible).toBeGreaterThanOrEqual(0.5);
+        expect(visible).toBeGreaterThanOrEqual(0.38);
+        expect(visible).toBeLessThanOrEqual(0.62);
       }
     }
   });
@@ -238,7 +239,7 @@ describe('layout', () => {
     }
   });
 
-  it('scales the main group to 80-90% at S and 90-110% at L', () => {
+  it('scales the hero to 65-80% at S and 75-90% at L', () => {
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
       for (const templateId of TEMPLATE_IDS) {
@@ -257,7 +258,7 @@ describe('layout', () => {
             (object) => object.role === 'main',
           );
           const fill = mainGroupFill(mains, scene.scale, frame);
-          const [low, high] = size === 'S' ? [0.8, 0.9] : [0.9, 1.1];
+          const [low, high] = size === 'S' ? [0.65, 0.8] : [0.75, 0.9];
           expect(fill).toBeGreaterThanOrEqual(low - 0.02);
           expect(fill).toBeLessThanOrEqual(high + 0.02);
         }
@@ -265,7 +266,7 @@ describe('layout', () => {
     }
   });
 
-  it('keeps backgrounds beside the group and scales the whole scene', () => {
+  it('crops one secondary tight against the hero', () => {
     for (const format of FORMATS_IDS) {
       const frame = FORMATS[format];
       const limit = Math.min(frame.w, frame.h);
@@ -294,11 +295,16 @@ describe('layout', () => {
           const mains = scene.objects.filter(
             (object) => object.role === 'main',
           );
+          const backgrounds = scene.objects.filter(
+            (object) => object.role === 'background',
+          );
+          const expected = template.format === 'landscape' ? 2 : 1;
+          expect(backgrounds).toHaveLength(expected);
           const mainUnion = unionOf(
             mains.map((object) => axisBox(object, scene.scale)),
           );
-          const fill = mainGroupFill(scene.objects, scene.scale, frame);
-          const [low, high] = size === 'S' ? [0.8, 0.9] : [0.9, 1.1];
+          const fill = mainGroupFill(mains, scene.scale, frame);
+          const [low, high] = size === 'S' ? [0.65, 0.8] : [0.75, 0.9];
           expect(fill).toBeGreaterThanOrEqual(low - 0.02);
           expect(fill).toBeLessThanOrEqual(high + 0.02);
           const hero = mains.reduce((best, object) =>
@@ -310,13 +316,12 @@ describe('layout', () => {
           expect(
             visibleFraction(axisBox(hero, scene.scale), frame),
           ).toBeGreaterThanOrEqual(0.7);
-          const centers: number[] = [];
-          for (const background of scene.objects) {
-            if (background.role !== 'background') continue;
+          for (const background of backgrounds) {
             const box = axisBox(background, scene.scale);
-            expect(visibleFraction(box, frame)).toBeGreaterThanOrEqual(0.5);
-            expect(separation(box, mainUnion)).toBeLessThan(limit * 0.22);
-            centers.push(box.y + box.h / 2);
+            const visible = visibleFraction(box, frame);
+            expect(visible).toBeGreaterThanOrEqual(0.38);
+            expect(visible).toBeLessThanOrEqual(0.62);
+            expect(separation(box, mainUnion)).toBeLessThan(limit * 0.04);
             for (const main of mains) {
               expect(intersection(box, axisBox(main, scene.scale))).toBeNull();
             }
@@ -324,9 +329,6 @@ describe('layout', () => {
               Math.min(...mains.map((object) => object.z)),
             );
           }
-          const highCenter = Math.max(...centers);
-          const lowCenter = Math.min(...centers);
-          expect(highCenter - lowCenter).toBeGreaterThan(frame.h * 0.12);
         }
       }
     }
